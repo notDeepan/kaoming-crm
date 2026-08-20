@@ -1,0 +1,924 @@
+// KAO MING CRM — full data model (all 24 tables, spec §28.3).
+// Provider is SQLite for local evaluation; the schema is PostgreSQL-compatible with no
+// SQLite-only features, so `provider = "postgresql"` is the only change to deploy.
+//
+// Deliberate portability decisions (see CLAUDE.md):
+//  - No Prisma `enum` types — enums are String columns validated by Zod (src/lib/enums.ts).
+//    Prisma enums are unsupported on SQLite AND §28.3 wants enums stored as readable strings.
+//  - No scalar lists (String[]) — unsupported on SQLite. Queryable multi-selects are child
+//    tables (agent_territory, model_option_applicability); non-queried ones are Json columns.
+//  - Money is always Decimal with an explicit currency string. Never float, never a bare amount.
+//  - Frozen snapshots (quotation / installed machine configuration) are Json, denormalised on
+//    purpose — they must never change when the catalogue does.
+//  - Soft delete everywhere via `deletedAt`. Append-only logs (audit_log, document_access_log,
+//    opportunity_stage_history) are never updated or deleted.
+//  - createdById / updatedById / ownerUserId hold user ids as scalars (indexed) rather than
+//    Prisma relations, to keep the User model from carrying ~60 back-relations. Users are never
+//    hard-deleted (US-02), so provenance stays resolvable. Structural relations are explicit.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identity / control
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id                 String    @id @default(uuid())
+  username           String    @unique
+  email              String    @unique
+  fullName           String
+  fullNameZh         String?
+  role               String // enums.Role
+  languagePreference String    @default("en") // enums.Language
+  jobTitle           String?
+  phone              String?
+  status             String    @default("active") // enums.UserStatus
+  lastLoginAt        DateTime?
+  passwordHash       String
+  mustChangePassword Boolean   @default(false)
+  failedLoginCount   Int       @default(0)
+  lockedUntil        DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  notifications           Notification[]
+  notificationPreferences NotificationPreference[]
+  savedViews              SavedView[]
+
+  @@index([role])
+  @@index([status])
+  @@map("user")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  valueJson   Json
+  description String?
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@map("system_setting")
+}
+
+// Append-only. No update, no delete, no deletedAt (SE-09 / SE-10).
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String // enums.AuditAction
+  entityType String
+  entityId   String?
+  beforeJson Json?
+  afterJson  Json?
+  summary    String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+model Notification {
+  id          String    @id @default(uuid())
+  userId      String
+  type        String // enums.NotificationType
+  title       String
+  body        String?
+  payloadJson Json?
+  readAt      DateTime?
+  emailSentAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, readAt])
+  @@map("notification")
+}
+
+model NotificationPreference {
+  id       String  @id @default(uuid())
+  userId   String
+  type     String // enums.NotificationType
+  enabled  Boolean @default(true)
+  delivery String  @default("digest") // immediate | digest
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, type])
+  @@map("notification_preference")
+}
+
+// Personal saved list-view configuration (SL-02). Belongs to a user + an entity.
+model SavedView {
+  id         String   @id @default(uuid())
+  userId     String
+  entityType String // agent | customer | contact | ...
+  name       String
+  configJson Json // columns, filters, sort
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, entityType])
+  @@map("saved_view")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Channel — Agent / Customer / Contact
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Agent {
+  id               String  @id @default(uuid())
+  agentCode        String  @unique // e.g. TR-01
+  companyNameEn    String
+  companyNameLocal String?
+  agentType        String // enums.AgentType
+  status           String // enums.AgentStatus
+  website          String?
+  logoDocumentId   String?
+
+  // Territory & terms
+  territoryNotes            String?
+  exclusivity               String? // enums.Exclusivity
+  exclusiveProductFamilies  Json? // string[] of enums.ProductFamily — non-queried multi-select
+  agreementStartDate        DateTime?
+  agreementEndDate          DateTime?
+  commissionPercent         Decimal?
+  standardDiscountPercent   Decimal?
+  pricingBasis              String? // enums.PricingBasis
+  paymentTerms              String?
+  preferredCurrency         String? // enums.Currency
+  preferredIncoterms        String?
+
+  // Relationship management
+  ownerUserId       String
+  primaryContactId  String?
+  workingLanguage   String? // enums.WorkingLanguage
+  lastContactDate   DateTime? // system-maintained from most recent completed activity
+  nextContactDue    DateTime?
+  contactCadenceDays Int?
+  firstAppointedDate DateTime?
+  notes             String?
+  tags              Json? // string[] — non-queried multi-select
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  territories       AgentTerritory[]
+  contacts          Contact[]
+  customers         Customer[]
+  opportunities     Opportunity[]
+  quotations        Quotation[]
+  activities        Activity[]
+  documents         Document[]
+  installedMachines InstalledMachine[]
+  enquiries         Enquiry[]
+
+  @@index([status])
+  @@index([ownerUserId])
+  @@map("agent")
+}
+
+// One row per country an agent covers. Queryable — powers AG-01 exclusive-claim check,
+// AG-02 out-of-territory warning, and the territory coverage report.
+model AgentTerritory {
+  id            String  @id @default(uuid())
+  agentId       String
+  countryCode   String // ISO 3166-1 alpha-2
+  exclusivity   String? // enums.Exclusivity — may narrow the agent-level default per country
+  productFamily String? // enums.ProductFamily — optional per-family scoping
+
+  createdAt DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, countryCode, productFamily])
+  @@index([countryCode])
+  @@map("agent_territory")
+}
+
+model Customer {
+  id                    String  @id @default(uuid())
+  customerCode          String  @unique
+  companyNameEn         String
+  companyNameLocal      String?
+  country               String // ISO alpha-2
+  city                  String?
+  addressEn             String?
+  addressLocal          String?
+  industry              String? // enums.Industry
+  customerType          String // enums.CustomerType
+  primaryAgentId        String?
+  ownerUserId           String
+  website               String?
+  employeeCount         Int?
+  existingMachinesNotes String?
+  notes                 String?
+  tags                  Json?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  primaryAgent      Agent?             @relation(fields: [primaryAgentId], references: [id])
+  contacts          Contact[]
+  opportunities     Opportunity[]
+  quotations        Quotation[]
+  activities        Activity[]
+  documents         Document[]
+  installedMachines InstalledMachine[]
+  enquiries         Enquiry[]
+
+  @@index([country])
+  @@index([customerType])
+  @@index([ownerUserId])
+  @@index([primaryAgentId])
+  @@map("customer")
+}
+
+// A person, belonging polymorphically to an Agent OR a Customer.
+// Modelled as two nullable typed FKs (exactly one set, app-enforced) for real referential
+// integrity on both databases, plus a parentType discriminator for convenience.
+model Contact {
+  id               String  @id @default(uuid())
+  parentType       String // enums.ContactParent — agent | customer
+  agentId          String?
+  customerId       String?
+  fullName         String
+  nameLocal        String?
+  jobTitle         String?
+  roleInDeal       String? // enums.RoleInDeal
+  email            String?
+  phone            String?
+  mobile           String?
+  messagingHandle  String?
+  preferredLanguage String? // enums.Language
+  isPrimary        Boolean @default(false)
+  notes            String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  agent    Agent?    @relation(fields: [agentId], references: [id])
+  customer Customer? @relation(fields: [customerId], references: [id])
+
+  @@index([agentId])
+  @@index([customerId])
+  @@index([email])
+  @@index([fullName])
+  @@map("contact")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Commercial core — Enquiry / Opportunity / Quotation / Catalogue (schema now, UI Phase 2)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Enquiry {
+  id               String  @id @default(uuid())
+  enquiryNo        String  @unique // ENQ-YYYY-NNNN
+  receivedDate     DateTime
+  source           String // enums.EnquirySource
+  sourceDetail     String?
+  enquiryType      String // enums.EnquiryType
+  agentId          String?
+  customerId       String?
+  customerNameRaw  String?
+  country          String
+  contactName      String?
+  contactEmail     String?
+  productInterest  Json? // string[] of ProductFamily
+  requirementSummary String?
+  status           String // enums.EnquiryStatus
+  notPursuedReason String? // enums.NotPursuedReason
+  ownerUserId      String
+  nextActionDate   DateTime?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  agent         Agent?        @relation(fields: [agentId], references: [id])
+  customer      Customer?     @relation(fields: [customerId], references: [id])
+  opportunities Opportunity[]
+
+  @@index([status])
+  @@index([ownerUserId])
+  @@map("enquiry")
+}
+
+model Opportunity {
+  id                  String  @id @default(uuid())
+  opportunityNo       String  @unique // OPP-YYYY-NNNN
+  name                String
+  customerId          String
+  agentId             String?
+  country             String
+  ownerUserId         String
+  stage               String // enums.Stage
+  probability         Int?
+  estimatedValue      Decimal?
+  currency            String // enums.Currency
+  expectedOrderDate   DateTime?
+  expectedDeliveryDate DateTime?
+  productFamilies     Json? // string[]
+  machineQuantity     Int?    @default(1)
+  requirementSummary  String?
+  competitors         Json? // string[]
+  sourceEnquiryId     String?
+  nextAction          String?
+  nextActionDate      DateTime?
+  lostReason          String? // enums.LostReason
+  lostToCompetitor    String?
+  stageChangedAt      DateTime  @default(now())
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  customer          Customer                  @relation(fields: [customerId], references: [id])
+  agent             Agent?                    @relation(fields: [agentId], references: [id])
+  sourceEnquiry     Enquiry?                  @relation(fields: [sourceEnquiryId], references: [id])
+  stageHistory      OpportunityStageHistory[]
+  quotations        Quotation[]
+  activities        Activity[]
+  documents         Document[]
+  installedMachines InstalledMachine[]
+  orderHandovers    OrderHandover[]
+
+  @@index([stage])
+  @@index([ownerUserId])
+  @@index([customerId])
+  @@index([agentId])
+  @@map("opportunity")
+}
+
+// Append-only stage transition record (OP-01).
+model OpportunityStageHistory {
+  id            String   @id @default(uuid())
+  opportunityId String
+  fromStage     String?
+  toStage       String
+  changedById   String?
+  changedAt     DateTime @default(now())
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@index([opportunityId])
+  @@map("opportunity_stage_history")
+}
+
+model Quotation {
+  id                   String  @id @default(uuid())
+  quoteNo              String // KM-Q-YYYY-NNNN — shared across revisions
+  revision             Int     @default(1)
+  // Optional until the opportunities module lands; a quote can stand on a customer + machine.
+  opportunityId        String?
+  customerId           String
+  agentId              String?
+  quoteTo              String // enums.QuoteTo — agent | end_customer
+  issueDate            DateTime?
+  validityDays         Int
+  validUntil           DateTime?
+  validityText         String? // A1 "Validity time" free text, default "3 months"
+  currency             String // enums.Currency
+  exchangeRateToTwd    Decimal?
+  incoterms            String?
+  namedPlace           String?
+  paymentTerms         String?
+  leadTimeDays         Int?
+  warrantyTerms        String?
+  status               String // enums.QuotationStatus
+  preparedById         String
+  notesToCustomer      String?
+  internalNotes        String?
+  refNo                String? // A6 Q + ddmmyyyy + initials + seq, generated on issue
+
+  // Addendum A9 header additions
+  unitSystem           String   @default("metric") // A5 Metric | Imperial selector
+  machineType          String? // A1 free text, e.g. "KAO MING BRAND DOUBLE COLUMN MULTI-CENTER"
+  machineConfigHeading String? // A1 2–3 free-text configuration heading lines (newline-separated)
+  placeOfDelivery      String? // A1 default "FOB TAIWAN"
+  timeOfDelivery       String?
+  sectionManagerName   String? // A1, defaults from settings, overridable per quote
+  showDiscountOnPrint  Boolean  @default(false) // A8 Q-29
+  discountPercent      Decimal? // A8 quotation-level discount, internal unless toggle on
+
+  // The base machine being quoted; its spec block resolves + snapshots at issue.
+  machineModelId       String?
+  // Editable spec lines (the 10 printed A2 lines), auto-filled then salesperson-editable (Q-02).
+  specLinesJson        Json?
+  // A3 standard-accessories block, filled from the catalogue then editable per quote (Q-05).
+  standardAccessoriesText String?
+
+  // QS-01 — frozen on issue; catalogue edits never touch this.
+  configurationSnapshot Json?
+  previousRevisionId   String?  @unique
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  opportunity      Opportunity?    @relation(fields: [opportunityId], references: [id])
+  customer         Customer        @relation(fields: [customerId], references: [id])
+  agent            Agent?          @relation(fields: [agentId], references: [id])
+  machineModel     MachineModel?   @relation("QuotationMachine", fields: [machineModelId], references: [id])
+  previousRevision Quotation?      @relation("QuotationRevision", fields: [previousRevisionId], references: [id])
+  nextRevision     Quotation?      @relation("QuotationRevision")
+  lines            QuotationLine[]
+  installedMachines InstalledMachine[]
+
+  @@unique([quoteNo, revision])
+  @@index([status])
+  @@index([opportunityId])
+  @@map("quotation")
+}
+
+model QuotationLine {
+  id                       String  @id @default(uuid())
+  quotationId              String
+  lineNo                   Int
+  lineType                 String // enums.LineType — catalogue | custom
+  lineKind                 String  @default("option") // machine | option | custom (print grouping)
+  machineModelId           String?
+  modelOptionId            String?
+  descriptionEn            String
+  descriptionZh            String?
+  quantity                 Decimal @default(1)
+  unitPrice                Decimal? // A7: nullable — prints as TBD, never treated as zero
+  discountPercent          Decimal?
+  lineTotal                Decimal?
+  leadTimeImpactDays       Int?
+  requiresEngineeringReview Boolean @default(false)
+  engineeringReviewStatus  String? // enums.EngineeringReviewStatus
+  internalCost             Decimal? // never printed
+
+  quotation    Quotation     @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  machineModel MachineModel? @relation(fields: [machineModelId], references: [id])
+  modelOption  ModelOption?  @relation(fields: [modelOptionId], references: [id])
+
+  @@index([quotationId])
+  @@map("quotation_line")
+}
+
+// A10 Q-33 — the fields constant across a series. Spec values are value+unit pairs (A5/Q-03) or
+// text where non-numeric. Series-level values are resolved and flattened onto the model at quote
+// time (Q-35); an issued quotation never sees later series edits.
+model MachineSeries {
+  id             String  @id @default(uuid())
+  seriesCode     String  @unique // e.g. HMA (Minerva)
+  nameEn         String
+  nameZh         String?
+  productFamily  String // enums.ProductFamily
+  status         String  @default("active") // enums.ModelStatus
+  // Per-series digit→millimetre mapping for the add-variant prefill (Q-37). Never a global rule.
+  codeMappingJson Json?
+  descriptionEn  String?
+  descriptionZh  String?
+
+  // ── A2 printed specification (value + unit; text where non-numeric or a range) ──
+  travelXValue            Decimal?
+  travelXUnit             String?
+  travelYValue            Decimal?
+  travelYUnit             String?
+  travelZValue            Decimal?
+  travelZUnit             String?
+  distanceColumnsValue    Decimal?
+  distanceColumnsUnit     String?
+  spindleTaper            String?
+  spindleNoseToTable      String? // may be a range, e.g. "150–1150 mm"
+  spindleMotorTorqueValue Decimal?
+  spindleMotorTorqueUnit  String?
+  spindleMotorPowerValue  Decimal?
+  spindleMotorPowerUnit   String?
+  spindleSpeedVValue      Decimal?
+  spindleSpeedVUnit       String?
+  spindleSpeedHValue      Decimal?
+  spindleSpeedHUnit       String?
+  toolMagazine            String? // e.g. "30 ATC standard"
+  tableAreaXValue         Decimal?
+  tableAreaXUnit          String?
+  tableAreaYValue         Decimal?
+  tableAreaYUnit          String?
+  maxTableLoadingValue    Decimal?
+  maxTableLoadingUnit     String? // t | kg | kg/m² — the record states which quantity it holds
+  splashGuardText         String?
+  // ── internal, stored not printed (Q-02A): subset as columns + long tail as JSON ──
+  rapidTraverseValue      Decimal?
+  rapidTraverseUnit       String?
+  positioningAccuracy     String?
+  repeatability           String?
+  machineHeightValue      Decimal?
+  machineHeightUnit       String?
+  floorSpace              String?
+  netWeightValue          Decimal?
+  netWeightUnit           String?
+  controller              String?
+  electricalSupply        String?
+  airPressure             String?
+  toolShankShape          String?
+  extraSpecsJson          Json?
+  standardAccessories     String? // A3 rich-text block, printed below the total
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  models        MachineModel[]
+  seriesOptions MachineSeriesOption[]
+
+  @@index([productFamily])
+  @@map("machine_series")
+}
+
+model MachineModel {
+  id                   String  @id @default(uuid())
+  modelCode            String  @unique
+  modelName            String
+  productFamily        String // enums.ProductFamily
+  status               String // enums.ModelStatus
+  seriesId             String?
+  basePriceUsd         Decimal? // nullable (A7); held independently of TWD — no auto-convert (CA-03)
+  basePriceTwd         Decimal?
+  standardLeadTimeDays Int?
+  specSheetDocumentId  String?
+  descriptionEn        String?
+  descriptionZh        String?
+
+  // Same spec column set as the series. A model carries the size-varying fields and any value
+  // where it genuinely departs from its series (Q-34); resolution is model ?? series.
+  travelXValue            Decimal?
+  travelXUnit             String?
+  travelYValue            Decimal?
+  travelYUnit             String?
+  travelZValue            Decimal?
+  travelZUnit             String?
+  distanceColumnsValue    Decimal?
+  distanceColumnsUnit     String?
+  spindleTaper            String?
+  spindleNoseToTable      String?
+  spindleMotorTorqueValue Decimal?
+  spindleMotorTorqueUnit  String?
+  spindleMotorPowerValue  Decimal?
+  spindleMotorPowerUnit   String?
+  spindleSpeedVValue      Decimal?
+  spindleSpeedVUnit       String?
+  spindleSpeedHValue      Decimal?
+  spindleSpeedHUnit       String?
+  toolMagazine            String?
+  tableAreaXValue         Decimal?
+  tableAreaXUnit          String?
+  tableAreaYValue         Decimal?
+  tableAreaYUnit          String?
+  maxTableLoadingValue    Decimal?
+  maxTableLoadingUnit     String?
+  splashGuardText         String?
+  rapidTraverseValue      Decimal?
+  rapidTraverseUnit       String?
+  positioningAccuracy     String?
+  repeatability           String?
+  machineHeightValue      Decimal?
+  machineHeightUnit       String?
+  floorSpace              String?
+  netWeightValue          Decimal?
+  netWeightUnit           String?
+  controller              String?
+  electricalSupply        String?
+  airPressure             String?
+  toolShankShape          String?
+  extraSpecsJson          Json?
+  standardAccessories     String? // per-model override of the series accessories block
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  series                MachineSeries?             @relation(fields: [seriesId], references: [id])
+  optionApplicabilities ModelOptionApplicability[]
+  quotationLines        QuotationLine[]
+  quotationsAsMachine   Quotation[]                @relation("QuotationMachine")
+  installedMachines     InstalledMachine[]
+
+  @@index([productFamily])
+  @@index([status])
+  @@index([seriesId])
+  @@map("machine_model")
+}
+
+model ModelOption {
+  id                       String  @id @default(uuid())
+  optionCode               String  @unique
+  optionNameEn             String
+  optionNameZh             String
+  category                 String // enums.OptionCategory
+  priceUsd                 Decimal? // nullable (A7)
+  priceTwd                 Decimal?
+  isStandard               Boolean @default(false)
+  mutexGroup               String? // options sharing a value are mutually exclusive (CA-02)
+  leadTimeImpactDays       Int?
+  requiresEngineeringReview Boolean @default(false)
+  notes                    String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  applicabilities   ModelOptionApplicability[]
+  seriesApplicabilities MachineSeriesOption[]
+  quotationLines    QuotationLine[]
+
+  @@index([category])
+  @@map("model_option")
+}
+
+// Model-level applicability exception (CA-01). Availability normally comes from the series set
+// below; this pins or removes an option for a specific model.
+model ModelOptionApplicability {
+  id             String @id @default(uuid())
+  modelOptionId  String
+  machineModelId String
+
+  modelOption  ModelOption  @relation(fields: [modelOptionId], references: [id], onDelete: Cascade)
+  machineModel MachineModel @relation(fields: [machineModelId], references: [id], onDelete: Cascade)
+
+  @@unique([modelOptionId, machineModelId])
+  @@map("model_option_applicability")
+}
+
+// A series' applicable option set (Q-33). e.g. 90° Head and Manual Universal Head are NOT on HMA.
+model MachineSeriesOption {
+  id            String @id @default(uuid())
+  machineSeriesId String
+  modelOptionId String
+
+  series      MachineSeries @relation(fields: [machineSeriesId], references: [id], onDelete: Cascade)
+  modelOption ModelOption   @relation(fields: [modelOptionId], references: [id], onDelete: Cascade)
+
+  @@unique([machineSeriesId, modelOptionId])
+  @@map("machine_series_option")
+}
+
+// A4 — the system learns payment terms / delivery times per country instead of a maintained
+// library. Every distinct value entered into a designated field is remembered and ranked.
+model RememberedValue {
+  id               String   @id @default(uuid())
+  fieldKey         String // terms_of_payment | time_of_delivery | place_of_delivery | machine_type | config_heading
+  value            String
+  country          String? // ISO alpha-2 the value was used for
+  userId           String?
+  useCount         Int      @default(1)
+  isCountryDefault Boolean  @default(false) // admin-marked default for a country (Q-11)
+  lastUsedAt       DateTime @default(now())
+  createdAt        DateTime @default(now())
+
+  @@index([fieldKey, country])
+  @@index([fieldKey, isCountryDefault])
+  @@map("remembered_value")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Activity — polymorphic (typed nullable FKs), shared memory of the company
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Activity {
+  id                 String  @id @default(uuid())
+  activityType       String // enums.ActivityType
+  subject            String
+  relatedToType      String // enums.ActivityParent
+  agentId            String?
+  customerId         String?
+  opportunityId      String?
+  installedMachineId String?
+  contactsInvolved   Json? // string[] of contact ids
+  activityDate       DateTime
+  durationMinutes    Int?
+  location           String?
+  direction          String? // enums.Direction
+  summary            String?
+  outcome            String? // enums.Outcome
+  nextAction         String?
+  nextActionDate     DateTime?
+  nextActionOwnerId  String?
+  status             String // enums.ActivityStatus
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  agent            Agent?            @relation(fields: [agentId], references: [id])
+  customer         Customer?         @relation(fields: [customerId], references: [id])
+  opportunity      Opportunity?      @relation(fields: [opportunityId], references: [id])
+  installedMachine InstalledMachine? @relation(fields: [installedMachineId], references: [id])
+
+  @@index([relatedToType])
+  @@index([agentId])
+  @@index([customerId])
+  @@index([opportunityId])
+  @@index([nextActionDate])
+  @@map("activity")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Asset & control — Installed base / Order handover / Documents / Knowledge
+// ─────────────────────────────────────────────────────────────────────────────
+
+model InstalledMachine {
+  id                    String  @id @default(uuid())
+  serialNo              String  @unique // permanent machine identity (IB-06)
+  machineModelId        String
+  configurationSnapshot Json? // frozen from the winning quotation
+  customerId            String
+  agentId               String?
+  sourceOpportunityId   String?
+  sourceQuotationId     String?
+  country               String
+  siteAddress           String?
+  orderDate             DateTime?
+  shipDate              DateTime?
+  installationDate      DateTime?
+  commissioningDate     DateTime?
+  warrantyStartDate     DateTime?
+  warrantyEndDate       DateTime?
+  controllerBrand       String?
+  controllerVersion     String?
+  status                String // enums.InstalledStatus
+  notes                 String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  machineModel     MachineModel @relation(fields: [machineModelId], references: [id])
+  customer         Customer     @relation(fields: [customerId], references: [id])
+  agent            Agent?       @relation(fields: [agentId], references: [id])
+  sourceOpportunity Opportunity? @relation(fields: [sourceOpportunityId], references: [id])
+  sourceQuotation  Quotation?   @relation(fields: [sourceQuotationId], references: [id])
+  activities       Activity[]
+
+  @@index([country])
+  @@index([machineModelId])
+  @@index([agentId])
+  @@index([warrantyEndDate])
+  @@map("installed_machine")
+}
+
+model OrderHandover {
+  id                   String  @id @default(uuid())
+  orderNo              String  @unique
+  opportunityId        String
+  quotationId          String?
+  poNumber             String?
+  poDate               DateTime?
+  poDocumentId         String?
+  orderValue           Decimal?
+  currency             String? // enums.Currency
+  promisedDeliveryDate DateTime?
+  actualShipDate       DateTime?
+  fatDate              DateTime?
+  fatStatus            String? // enums.FatStatus
+  status               String // enums.OrderStatus
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id])
+
+  @@index([status])
+  @@map("order_handover")
+}
+
+model Document {
+  id            String  @id @default(uuid())
+  fileName      String
+  storedPath    String // hashed, non-guessable, outside web root — never the original name
+  documentType  String // enums.DocumentType
+  sensitivity   String // enums.Sensitivity
+  relatedToType String // enums.DocumentParent
+  // typed nullable parents
+  agentId            String?
+  customerId         String?
+  opportunityId      String?
+  quotationId        String?
+  installedMachineId String?
+  machineModelId     String?
+  version       Int     @default(1)
+  supersedesId  String? @unique
+  ownerUserId   String
+  description   String?
+  fileSize      Int?
+  mimeType      String?
+  checksum      String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime? // DM-06 soft delete, file retained on disk
+
+  agent      Agent?    @relation(fields: [agentId], references: [id])
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id])
+  supersedes Document?  @relation("DocumentVersion", fields: [supersedesId], references: [id])
+  supersededBy Document? @relation("DocumentVersion")
+  grants     DocumentAccessGrant[]
+  accessLogs DocumentAccessLog[]
+
+  @@index([documentType])
+  @@index([sensitivity])
+  @@index([relatedToType])
+  @@map("document")
+}
+
+// §21.2 three-layer access control. accessType 'deny' always wins.
+model DocumentAccessGrant {
+  id          String   @id @default(uuid())
+  documentId  String
+  userId      String
+  accessType  String // grant_view | grant_download | deny
+  grantedById String?
+  createdAt   DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, userId, accessType])
+  @@index([userId])
+  @@map("document_access_grant")
+}
+
+// Append-only immutable access trail (DM-02 / DM-03).
+model DocumentAccessLog {
+  id         String   @id @default(uuid())
+  documentId String
+  userId     String
+  action     String // view | download
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id])
+
+  @@index([documentId])
+  @@index([userId])
+  @@map("document_access_log")
+}
+
+model KnowledgeArticle {
+  id              String  @id @default(uuid())
+  titleEn         String
+  titleZh         String?
+  category        String // enums.KnowledgeCategory
+  productFamilies Json? // string[]
+  body            String?
+  visibility      String // enums.KnowledgeVisibility
+  status          String // enums.KnowledgeStatus
+  authorId        String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+
+  @@index([category])
+  @@index([status])
+  @@map("knowledge_article")
+}

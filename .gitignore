@@ -1,0 +1,22 @@
+# KAO MING internal material — deliberately NOT published.
+# The build specification, the annotated live quotation template and the product catalogue PDFs
+# are company-confidential and/or copyrighted. They stay on the local machine.
+/docs
+
+/node_modules
+/.next
+/out
+/build
+*.log
+.env
+.env.local
+/prisma/*.db
+/prisma/*.db-journal
+/storage
+/test-results
+/playwright-report
+/.playwright
+next-env.d.ts
+tsconfig.tsbuildinfo
+.claude/settings.local.json
+.DS_Store
