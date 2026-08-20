@@ -1,0 +1,920 @@
+<title>KAO MING CRM</title>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   KAO MING CRM — interactive demo.
+   Tokens taken verbatim from the project's tailwind.config.ts.
+   Deliberately single-theme: this is a light "paper" instrument
+   panel, matching the real app's color-scheme: light. Every colour
+   is painted explicitly so the page holds on any host ground.
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --ink:#15181B;
+  --paper:#EDEFF1;
+  --surface:#FFFFFF;
+  --grey-line:#CDD2D6;
+  --grey-mute:#697077;
+  --kmc:#BE1E2D;
+  --kmc-ink:#8E1621;
+  --kmc-wash:#F7E4E6;
+  --alert:#B26A00;
+  --alert-wash:#FBEED6;
+  --peak:#6BA6D6;
+  --script:#3AA0A8;
+  --mono: ui-monospace,"SF Mono","Menlo","Consolas","Liberation Mono",monospace;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
+  --row:32px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:13px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--kmc);outline-offset:1px}
+::selection{background:var(--kmc-wash)}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+
+.label{
+  font-family:var(--mono);font-size:11px;line-height:14px;
+  letter-spacing:.04em;text-transform:uppercase;color:var(--grey-mute);
+}
+
+/* ── login ── */
+#login{display:grid;grid-template-columns:1.05fr 1fr;min-height:100vh}
+@media(max-width:820px){#login{grid-template-columns:1fr}#login .plate{display:none}}
+.plate{
+  background:var(--ink);color:var(--paper);
+  padding:36px 40px;display:flex;flex-direction:column;justify-content:space-between;gap:24px;
+}
+.plate .rule{height:3px;width:64px;background:var(--kmc)}
+.brandrow{display:flex;align-items:center;gap:12px}
+.brandname{font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
+.brandsub{
+  font-family:var(--mono);font-size:11px;letter-spacing:.2em;
+  text-transform:uppercase;color:rgba(237,239,241,.5)
+}
+.titleblock{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px 32px;max-width:380px;
+  border-top:1px solid rgba(237,239,241,.15);padding-top:22px;margin-top:24px
+}
+.titleblock dt{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:rgba(237,239,241,.45)}
+.titleblock dd{font-family:var(--mono);font-size:12px;margin:2px 0 0;color:rgba(237,239,241,.85)}
+.tagline{font-style:italic;color:var(--script);font-size:12px}
+.loginpane{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;position:relative}
+.loginform{width:100%;max-width:340px;display:flex;flex-direction:column;gap:18px}
+.loginform h1{font-size:19px;font-weight:600;margin:0}
+.loginform p.sub{color:var(--grey-mute);margin:2px 0 0;font-size:13px}
+
+.field{display:flex;flex-direction:column;gap:4px}
+.req{color:var(--kmc)}
+.input{
+  height:36px;width:100%;padding:0 10px;background:var(--surface);
+  border:1px solid var(--grey-line);border-radius:2px;font-size:13px
+}
+.input:focus{border-color:var(--kmc);outline:none}
+textarea.input{height:auto;min-height:64px;padding:6px 10px;line-height:1.4}
+.hint{font-family:var(--mono);font-size:11px;color:var(--grey-mute)}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:32px;padding:0 12px;border-radius:2px;font-size:13px;font-weight:500;
+  border:1px solid var(--grey-line);background:var(--surface);color:var(--ink);
+  transition:background .12s ease,border-color .12s ease
+}
+.btn:hover{background:var(--paper)}
+.btn.primary{background:var(--kmc);border-color:var(--kmc);color:#fff}
+.btn.primary:hover{background:var(--kmc-ink);border-color:var(--kmc-ink)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--grey-mute)}
+.btn.ghost:hover{color:var(--ink);background:var(--surface)}
+.btn.lg{height:38px;width:100%}
+
+.demonote{
+  border:1px solid var(--grey-line);background:var(--surface);border-radius:2px;
+  padding:8px 10px;font-size:12px;color:var(--grey-mute)
+}
+.demonote b{color:var(--ink);font-family:var(--mono)}
+
+/* ── segmented language switch ── */
+.seg{display:inline-flex;border:1px solid var(--grey-line);border-radius:2px;overflow:hidden;background:var(--surface)}
+.seg button{
+  height:26px;padding:0 10px;border:0;background:transparent;color:var(--grey-mute);
+  font-family:var(--mono);font-size:11px;font-weight:500
+}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.langtop{position:absolute;top:22px;right:22px}
+
+/* ── app shell ── */
+#app{display:none;height:100vh;overflow:hidden}
+#app.on{display:flex}
+.rail{
+  width:212px;flex-shrink:0;border-right:1px solid var(--grey-line);background:var(--paper);
+  padding:14px 12px;display:flex;flex-direction:column;gap:20px;overflow-y:auto
+}
+.raillogo{display:flex;align-items:center;gap:8px;padding:0 6px;text-decoration:none;color:inherit}
+.raillogo .n{font-size:13px;font-weight:600;letter-spacing:-.01em;line-height:1.1}
+.raillogo .s{font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--grey-mute)}
+.navgroup{display:flex;flex-direction:column;gap:2px}
+.navgroup .label{padding:0 10px 4px}
+.navitem{
+  display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:2px;
+  border:0;background:transparent;color:var(--grey-mute);text-align:left;font-size:13px;width:100%
+}
+.navitem:hover{background:rgba(255,255,255,.6);color:var(--ink)}
+.navitem.active{background:var(--surface);color:var(--ink);font-weight:500}
+.navitem.active svg{color:var(--kmc)}
+.navitem svg{width:16px;height:16px;flex-shrink:0}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{
+  height:52px;flex-shrink:0;display:flex;align-items:center;gap:16px;
+  padding:0 20px;border-bottom:1px solid var(--grey-line);background:var(--paper)
+}
+.searchwrap{position:relative;width:100%;max-width:380px}
+.searchwrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--grey-mute);width:15px;height:15px}
+.searchwrap input{height:34px;padding-left:30px}
+.who{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2;border-left:1px solid var(--grey-line);padding-left:12px}
+.who .n{font-size:12px;font-weight:500}
+.who .r{font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--grey-mute)}
+.content{flex:1;overflow-y:auto;min-height:0}
+
+/* ── list views ── */
+.pagehead{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--grey-line)}
+.pagehead h1{font-size:19px;font-weight:600;margin:0}
+.count{font-family:var(--mono);font-size:11px;color:var(--grey-mute)}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 20px;border-bottom:1px solid var(--grey-line)}
+.grow{margin-left:auto}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{
+  position:sticky;top:0;background:var(--paper);text-align:left;font-weight:500;
+  padding:7px 16px;white-space:nowrap;border-bottom:1px solid var(--grey-line);
+  font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--grey-mute)
+}
+thead th.r{text-align:right}
+tbody tr{height:var(--row);border-bottom:1px solid rgba(205,210,214,.6);cursor:pointer}
+tbody tr:hover{background:rgba(247,228,230,.4)}
+tbody td{padding:5px 16px;white-space:nowrap}
+tbody td.r{text-align:right}
+td .stack{display:flex;flex-direction:column;line-height:1.25}
+td .sec{font-family:var(--mono);font-size:11px;color:var(--grey-mute)}
+.strong{font-weight:500}
+
+.pill{
+  display:inline-flex;align-items:center;padding:1px 6px;border-radius:2px;border:1px solid var(--grey-line);
+  background:var(--surface);font-family:var(--mono);font-size:10px;font-weight:500;
+  letter-spacing:.04em;text-transform:uppercase;color:var(--ink);white-space:nowrap
+}
+.pill.active{border-color:rgba(190,30,45,.3);background:var(--kmc-wash);color:var(--kmc-ink)}
+.pill.warn{border-color:rgba(178,106,0,.3);background:var(--alert-wash);color:var(--alert)}
+.pill.muted{background:var(--paper);color:var(--grey-mute)}
+.over{color:var(--alert)}
+
+/* ── record pages ── */
+.record{max-width:1040px;margin:0 auto;padding:20px}
+.crumb{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.crumb .back{font-family:var(--mono);font-size:11px;color:var(--grey-mute);background:none;border:0;padding:0}
+.crumb .back:hover{color:var(--ink)}
+
+/* the signature: machine nameplate */
+.nameplate{border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:2px;overflow:hidden;box-shadow:inset 0 1px 0 0 rgba(255,255,255,.04)}
+.nameplate .toprule{height:3px;background:var(--kmc)}
+.nameplate .body{padding:12px 16px}
+.nameplate .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:rgba(237,239,241,.5)}
+.nameplate .title{font-family:var(--mono);font-size:17px;font-weight:600;line-height:1.2;margin-top:2px}
+.nameplate .subtitle{font-size:12px;color:rgba(237,239,241,.6);text-align:right;flex-shrink:0}
+.nameplate .title{min-width:0;overflow-wrap:anywhere}
+.nameplate .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 24px;margin-top:12px}
+@media(max-width:640px){.nameplate .grid{grid-template-columns:repeat(2,1fr)}}
+.nameplate .grid dt{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:rgba(237,239,241,.45)}
+.nameplate .grid dd{font-family:var(--mono);font-size:13px;margin:2px 0 0;font-variant-numeric:tabular-nums}
+
+.banner{border:1px solid;border-radius:2px;padding:7px 12px;font-size:12px;margin-top:10px}
+.banner.alert{border-color:rgba(178,106,0,.4);background:var(--alert-wash);color:var(--alert)}
+.banner.plain{border-color:var(--grey-line);background:var(--surface);color:var(--ink)}
+
+.strip{display:flex;flex-wrap:wrap;border:1px solid var(--grey-line);border-radius:2px;background:var(--surface);overflow:hidden;margin-top:8px}
+.strip .cell{flex:1;min-width:112px;padding:8px 14px;border-left:1px solid var(--grey-line);display:flex;flex-direction:column;gap:2px}
+.strip .cell:first-child{border-left:0}
+.strip .cell .k{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--grey-mute)}
+.strip .cell .v{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums}
+.strip .cell .v.alert{color:var(--alert)}
+
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+@media(max-width:820px){.cards{grid-template-columns:1fr}}
+.card{border:1px solid var(--grey-line);background:var(--surface);border-radius:2px;padding:14px}
+.card h2{margin:0 0 12px;display:flex;align-items:center;gap:8px}
+.dl{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px}
+.dl dt{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--grey-mute)}
+.dl dd{font-family:var(--mono);font-size:13px;margin:2px 0 0}
+.minitable{width:100%;font-size:13px}
+.minitable td{padding:5px 0;border-bottom:1px solid rgba(205,210,214,.6)}
+.minitable tr:last-child td{border-bottom:0}
+
+/* ── quotation print ── */
+.sheet{
+  width:210mm;max-width:100%;margin:20px auto;background:#fff;color:#000;
+  padding:14mm 16mm;font-size:10.5px;line-height:1.5;
+  box-shadow:0 2px 14px rgba(21,24,27,.18)
+}
+.sheet h1{text-align:center;font-size:15px;font-weight:600;letter-spacing:.04em;margin:0 0 12px}
+.sheet .row{display:flex;justify-content:space-between;gap:16px}
+.sheet .kv{display:grid;grid-template-columns:46% 1fr;margin-top:8px}
+.sheet .kv div{padding:1px 0}
+.sheet .k{font-weight:500}
+.sheet .band{border-top:1px solid #000;margin-top:12px;padding-top:8px}
+.sheet .spec div{padding:.5px 0}
+.sheet .total{display:flex;justify-content:space-between;border-top:1px solid #000;margin-top:8px;padding-top:4px;font-weight:600}
+.sheet .sec{font-weight:500;margin-top:12px}
+.sheet .end{text-align:center;margin:10px 0;letter-spacing:-.03em}
+.sheet .muted{color:rgba(0,0,0,.6)}
+.printbar{
+  position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;
+  background:var(--ink);color:var(--paper);padding:8px 20px
+}
+.printbar .back{font-family:var(--mono);font-size:11px;background:none;border:0;color:rgba(237,239,241,.7);padding:0}
+.printbar .back:hover{color:var(--paper)}
+
+.empty{max-width:420px;margin:56px auto;text-align:center;border:1px dashed var(--grey-line);background:rgba(255,255,255,.6);border-radius:2px;padding:40px 28px}
+.empty .rule{height:3px;width:40px;background:var(--kmc);margin:0 auto 12px}
+.empty h2{font-size:15px;margin:0 0 6px}
+.empty p{color:var(--grey-mute);margin:0}
+.footnote{max-width:1040px;margin:0 auto;padding:0 20px 28px;color:var(--grey-mute);font-size:12px}
+</style>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="login">
+  <aside class="plate">
+    <div class="rule"></div>
+    <div>
+      <div class="brandrow">
+        <svg width="44" height="44" viewBox="0 0 48 48" aria-label="KAO MING" role="img">
+          <path d="M4 40 A20 20 0 0 1 44 40 L37 40 A13 13 0 0 0 11 40 Z" fill="#BE1E2D"></path>
+          <path d="M10 40 L17 28 L24 40 Z" fill="#83B7DC"></path>
+          <path d="M15 40 L24 20 L33 40 Z" fill="#6BA6D6"></path>
+          <path d="M24 40 L31 26 L38 40 Z" fill="#4E8FC4"></path>
+        </svg>
+        <div>
+          <div class="brandname" data-t="app.name">KAO MING</div>
+          <div class="brandsub" data-t="app.system">Sales &amp; Channel</div>
+        </div>
+      </div>
+      <dl class="titleblock">
+        <div><dt>Machinery</dt><dd>CNC double-column · 5-axis · VMC</dd></div>
+        <div><dt>Since</dt><dd>1968 · Houli, Taichung</dd></div>
+        <div><dt>Coverage</dt><dd>Overseas agents &amp; dealers</dd></div>
+        <div><dt>Languages</dt><dd>English · 繁體中文</dd></div>
+      </dl>
+    </div>
+    <p class="tagline">Make same to different</p>
+  </aside>
+
+  <main class="loginpane">
+    <div class="langtop">
+      <div class="seg" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="zh" aria-pressed="false">繁中</button>
+      </div>
+    </div>
+    <form class="loginform" id="loginform">
+      <div>
+        <h1 data-t="auth.heading">Sign in to continue</h1>
+        <p class="sub" data-t="auth.sub">Overseas sales and channel management</p>
+      </div>
+      <div class="field">
+        <label class="label" for="u"><span data-t="auth.username">Username</span> <span class="req">*</span></label>
+        <input class="input mono" id="u" value="deepan" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label class="label" for="p"><span data-t="auth.password">Password</span> <span class="req">*</span></label>
+        <input class="input" id="p" type="password" value="demo-preview" autocomplete="off">
+      </div>
+      <button class="btn primary lg" type="submit" data-t="auth.action">Sign in</button>
+      <p class="demonote" data-t-html="auth.demo">
+        <b>Demo preview.</b> Nothing is sent anywhere and no account is checked — this page runs
+        entirely in your browser. Do not enter a real password.
+      </p>
+    </form>
+  </main>
+</div>
+
+<!-- ══════════════ APP ══════════════ -->
+<div id="app">
+  <nav class="rail">
+    <button class="raillogo" data-go="agents">
+      <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M4 40 A20 20 0 0 1 44 40 L37 40 A13 13 0 0 0 11 40 Z" fill="#BE1E2D"></path>
+        <path d="M15 40 L24 20 L33 40 Z" fill="#6BA6D6"></path>
+        <path d="M24 40 L31 26 L38 40 Z" fill="#4E8FC4"></path>
+      </svg>
+      <span><span class="n">KAO MING</span><br><span class="s">Sales &amp; Channel</span></span>
+    </button>
+    <div class="navgroup">
+      <div class="label" data-t="nav.channel">Channel</div>
+      <button class="navitem" data-go="agents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1M10 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6M17 13a3 3 0 1 0-2-5"/></svg><span data-t="nav.agents">Agents</span></button>
+      <button class="navitem" data-go="customers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l7-4 7 4v13M9 21v-5h2v5M14 11h.01M14 14h.01M6 11h.01M6 14h.01"/></svg><span data-t="nav.customers">Customers</span></button>
+      <button class="navitem" data-go="contacts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM8 9h8M8 13h5M8 17h3"/></svg><span data-t="nav.contacts">Contacts</span></button>
+      <button class="navitem" data-go="quotations"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v13H7zM14 3v5h5M9 13h6M9 16h6M9 10h3"/></svg><span data-t="nav.quotations">Quotations</span></button>
+    </div>
+    <div class="navgroup">
+      <div class="label" data-t="nav.admin">Administration</div>
+      <button class="navitem" data-go="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2l-.3-2.6H10l-.3 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2l.3 2.6h4l.3-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.06-.4.1-.8.1-1.2Z"/></svg><span data-t="nav.settings">Settings</span></button>
+      <button class="navitem" data-go="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-1a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg><span data-t="nav.users">Users</span></button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="searchwrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+        <input class="input" id="gsearch" data-ph="nav.search" placeholder="Search everything" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="grow"></div>
+      <div class="seg" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="zh" aria-pressed="false">繁中</button>
+      </div>
+      <div class="who"><span class="n">Deepan Goswami</span><span class="r" data-t="role.admin">System Administrator</span></div>
+      <button class="btn ghost" id="signout" data-t="auth.signout">Sign out</button>
+    </header>
+    <div class="content" id="view"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ══════════════ i18n ══════════════ */
+const T = {
+  en:{
+    "app.name":"KAO MING","app.system":"Sales & Channel",
+    "auth.heading":"Sign in to continue","auth.sub":"Overseas sales and channel management",
+    "auth.username":"Username","auth.password":"Password","auth.action":"Sign in","auth.signout":"Sign out",
+    "auth.demo":"<b>Demo preview.</b> Nothing is sent anywhere and no account is checked — this page runs entirely in your browser. Do not enter a real password.",
+    "nav.channel":"Channel","nav.admin":"Administration","nav.agents":"Agents","nav.customers":"Customers",
+    "nav.contacts":"Contacts","nav.quotations":"Quotations","nav.settings":"Settings","nav.users":"Users",
+    "nav.search":"Search everything","role.admin":"System Administrator",
+    "col.code":"Agent code","col.company":"Company name (English)","col.type":"Type","col.status":"Status",
+    "col.terr":"Territories","col.owner":"Owner","col.last":"Last contact","col.open":"Open opportunities",
+    "col.ccode":"Customer code","col.country":"Country","col.industry":"Industry","col.agent":"Primary agent",
+    "col.contacts":"Contacts","col.name":"Full name","col.job":"Job title","col.belongs":"Belongs to",
+    "col.parent":"Company","col.email":"Email","col.ref":"Reference","col.customer":"Customer","col.machine":"Machine","col.issued":"Issued",
+    "col.total":"Total","col.username":"Username","col.role":"Role","col.lastlogin":"Last login",
+    "sec.identity":"Territory & terms","sec.perf":"Performance","sec.contacts":"Contacts","sec.notes":"Notes",
+    "f.status":"Status","f.type":"Type","f.terr":"Territories","f.owner":"Owner","f.cadence":"Contact cadence (days)",
+    "f.last":"Last contact","f.excl":"Exclusivity","f.comm":"Commission %","f.disc":"Standard discount %",
+    "f.basis":"Pricing basis","f.curr":"Preferred currency","f.pay":"Payment terms","f.inco":"Preferred Incoterms",
+    "f.astart":"Agreement start","f.aend":"Agreement end",
+    "p.open":"Open opportunities","p.value":"Open value","p.quotes":"Quotations (12 mo)","p.m12":"Machines sold (12 mo)",
+    "p.life":"Machines sold (lifetime)","p.terr":"Installed in territory","p.days":"Days since contact",
+    "overdue":"Agent overdue for contact","overdueBy":"Overdue by {d} days","agreeExp":"Agreement expires in {d} days",
+    "days":"days","primary":"Primary contact","back":"Back",
+    "q.print":"Print","q.total":"TOTAL PRICE FOB TAIWAN (NET)","q.opt":"Optional Accessories","q.std":"Standard Accessories",
+    "set.title":"System settings","set.sub":"Defaults applied to new quotations and reminders. Override per record.",
+    "set.commercial":"Commercial terms","set.reminders":"Reminders",
+    "empty.search":"Search the whole system","empty.searchHint":"Agents, customers, contacts and serial numbers. Start typing.",
+    "noresult":"Nothing matched “{q}”.",
+    "demo.foot":"Interactive demo. Data is fictional and lives in this page only — nothing is saved and no server is involved."
+  },
+  zh:{
+    "app.name":"高明精機","app.system":"銷售與通路",
+    "auth.heading":"請登入以繼續","auth.sub":"海外銷售與代理通路管理",
+    "auth.username":"帳號","auth.password":"密碼","auth.action":"登入","auth.signout":"登出",
+    "auth.demo":"<b>展示版本。</b>不會傳送任何資料，也不會驗證帳號——本頁完全在您的瀏覽器中執行。請勿輸入真實密碼。",
+    "nav.channel":"通路","nav.admin":"管理","nav.agents":"代理商","nav.customers":"客戶",
+    "nav.contacts":"聯絡人","nav.quotations":"報價單","nav.settings":"系統設定","nav.users":"使用者",
+    "nav.search":"全系統搜尋","role.admin":"系統管理員",
+    "col.code":"代理商代碼","col.company":"公司名稱（英文）","col.type":"類型","col.status":"狀態",
+    "col.terr":"負責區域","col.owner":"負責人","col.last":"上次聯絡","col.open":"進行中商機",
+    "col.ccode":"客戶代碼","col.country":"國家","col.industry":"產業","col.agent":"主要代理商",
+    "col.contacts":"聯絡人","col.name":"姓名","col.job":"職稱","col.belongs":"隸屬",
+    "col.parent":"公司","col.email":"電子郵件","col.ref":"參考編號","col.customer":"客戶","col.machine":"機台","col.issued":"發出日",
+    "col.total":"總額","col.username":"帳號","col.role":"角色","col.lastlogin":"上次登入",
+    "sec.identity":"區域與條件","sec.perf":"績效","sec.contacts":"聯絡人","sec.notes":"備註",
+    "f.status":"狀態","f.type":"類型","f.terr":"負責區域","f.owner":"負責人","f.cadence":"聯絡週期（天）",
+    "f.last":"上次聯絡","f.excl":"獨家性","f.comm":"佣金 %","f.disc":"標準折扣 %",
+    "f.basis":"計價方式","f.curr":"慣用幣別","f.pay":"付款條件","f.inco":"慣用貿易條件",
+    "f.astart":"合約起始","f.aend":"合約到期",
+    "p.open":"進行中商機","p.value":"進行中金額","p.quotes":"報價（12 個月）","p.m12":"售出機台（12 個月）",
+    "p.life":"售出機台（累計）","p.terr":"區域內裝機","p.days":"距上次聯絡天數",
+    "overdue":"代理商已逾期未聯絡","overdueBy":"已逾期 {d} 天","agreeExp":"合約將於 {d} 天後到期",
+    "days":"天","primary":"主要聯絡人","back":"返回",
+    "q.print":"列印","q.total":"總價 FOB TAIWAN（淨額）","q.opt":"選購配件","q.std":"標準配件",
+    "set.title":"系統設定","set.sub":"套用於新報價與提醒的預設值，可於各筆資料覆寫。",
+    "set.commercial":"商務條件","set.reminders":"提醒",
+    "empty.search":"搜尋整個系統","empty.searchHint":"代理商、客戶、聯絡人與機台序號。開始輸入即可。",
+    "noresult":"找不到符合「{q}」的資料。",
+    "demo.foot":"互動展示。資料為虛構且僅存在於本頁——不會儲存，也沒有伺服器參與。"
+  }
+};
+const EN = {
+  agentType:{agent:"Agent",distributor:"Distributor",dealer:"Dealer",representative:"Representative"},
+  agentStatus:{active:"Active",prospective:"Prospective",probation:"Probation",dormant:"Dormant"},
+  excl:{exclusive:"Exclusive",non_exclusive:"Non-exclusive",exclusive_by_product_line:"Exclusive by product line"},
+  basis:{commission_on_invoice:"Commission on invoice"},
+  industry:{die_mould:"Die & mould",aerospace:"Aerospace",automotive:"Automotive",energy:"Energy",
+    heavy_machinery:"Heavy machinery",general_subcontract:"General subcontract",semiconductor:"Semiconductor"},
+  ctype:{active:"Active customer",prospect:"Prospect",former:"Former customer"},
+  parent:{agent:"Agent",customer:"Customer"},
+  qstatus:{issued:"Issued",draft:"Draft"},
+  ustatus:{active:"Active"},
+  role:{admin:"System Administrator",sales_manager:"Sales Manager",sales:"Overseas Sales / BD",engineer:"Application Engineer",viewer:"Management (Viewer)"},
+  country:{TR:"Turkey",IN:"India",PL:"Poland",TH:"Thailand",MX:"Mexico",VN:"Vietnam",DE:"Germany",ID:"Indonesia",US:"United States"}
+};
+const ZH = {
+  agentType:{agent:"代理商",distributor:"經銷商",dealer:"代銷商",representative:"代表"},
+  agentStatus:{active:"啟用",prospective:"潛在",probation:"試用",dormant:"休眠"},
+  excl:{exclusive:"獨家",non_exclusive:"非獨家",exclusive_by_product_line:"依產品線獨家"},
+  basis:{commission_on_invoice:"發票佣金"},
+  industry:{die_mould:"模具",aerospace:"航太",automotive:"汽車",energy:"能源",
+    heavy_machinery:"重機械",general_subcontract:"一般代工",semiconductor:"半導體"},
+  ctype:{active:"現有客戶",prospect:"潛在客戶",former:"舊客戶"},
+  parent:{agent:"代理商",customer:"客戶"},
+  qstatus:{issued:"已發出",draft:"草稿"},
+  ustatus:{active:"啟用"},
+  role:{admin:"系統管理員",sales_manager:"銷售經理",sales:"海外業務／BD",engineer:"應用工程師",viewer:"管理層（唯讀）"},
+  country:{TR:"土耳其",IN:"印度",PL:"波蘭",TH:"泰國",MX:"墨西哥",VN:"越南",DE:"德國",ID:"印尼",US:"美國"}
+};
+let lang = "en";
+const t  = k => (T[lang][k] ?? T.en[k] ?? k);
+const e  = (grp,k) => ((lang==="zh"?ZH:EN)[grp]?.[k]) ?? k;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ══════════════ seed data (fictional) ══════════════ */
+const USERS = {
+  u1:{n:"Deepan Goswami",r:"admin"}, u2:{n:"Lucy Chen",r:"sales_manager"},
+  u3:{n:"Mert Kaya",r:"sales"},      u4:{n:"Andy Wong",r:"sales"},
+  u5:{n:"Jason Hsu",r:"engineer"},   u6:{n:"T. K. Kao",r:"viewer"}
+};
+const AGENTS = [
+  {id:"DE-01",name:"Präzisions-Werkzeugmaschinen GmbH",type:"distributor",status:"active",terr:["DE"],owner:"u2",
+   cadence:45,last:9,excl:"exclusive",comm:6,curr:"USD",aend:85,astart:"18 Oct 2020",open:2,val:1840000,q12:4,m12:2,life:19,inTerr:19,
+   notes:"Longest-standing partner. Agreement renews soon.",
+   contacts:[{n:"Klaus Bergmann",j:"Geschäftsführer",e:"bergmann@praez-wm.de",p:true}]},
+  {id:"ID-01",name:"Karya Presisi Nusantara PT",type:"dealer",status:"dormant",terr:["ID"],owner:"u3",
+   cadence:90,last:160,excl:"non_exclusive",comm:9,curr:"USD",aend:-30,astart:"02 Jun 2024",open:0,val:0,q12:0,m12:0,life:3,inTerr:3,
+   notes:"Gone quiet since 2025. Agreement lapsed.",
+   contacts:[{n:"Budi Santoso",j:"Director",e:"budi@karyapresisi.co.id",p:true}]},
+  {id:"IN-01",name:"Bharat Machine Tools Pvt. Ltd.",type:"agent",status:"active",terr:["IN"],owner:"u4",
+   cadence:45,last:12,excl:"non_exclusive",comm:10,curr:"USD",aend:400,astart:"21 Feb 2024",open:3,val:960000,q12:6,m12:1,life:7,inTerr:7,
+   notes:"",
+   contacts:[{n:"Rajesh Nair",j:"Director",e:"rajesh@bharatmt.in",p:true}]},
+  {id:"MX-01",name:"Maquinaria CNC del Bajío S.A. de C.V.",type:"agent",status:"probation",terr:["MX"],owner:"u3",
+   cadence:30,last:47,excl:"non_exclusive",comm:10,curr:"USD",aend:150,astart:"05 May 2026",open:1,val:410000,q12:1,m12:0,life:0,inTerr:0,
+   notes:"New appointment on probation. Watch responsiveness.",
+   contacts:[{n:"Carlos Mendoza",j:"General Manager",e:"carlos@maqcncbajio.mx",p:true}]},
+  {id:"PL-01",name:"Precyzja Obrabiarki Sp. z o.o.",type:"distributor",status:"active",terr:["PL"],owner:"u3",
+   cadence:60,last:20,excl:"exclusive_by_product_line",comm:7,curr:"USD",aend:210,astart:"14 Dec 2024",open:2,val:1280000,q12:3,m12:1,life:5,inTerr:5,
+   notes:"",
+   contacts:[{n:"Tomasz Kowalski",j:"Owner",e:"tomasz@precyzja.pl",p:true}]},
+  {id:"TH-01",name:"Siam Precision Machinery Co., Ltd.",type:"dealer",status:"active",terr:["TH"],owner:"u4",
+   cadence:30,last:5,excl:"non_exclusive",comm:9,curr:"USD",aend:520,astart:"10 Oct 2025",open:2,val:520000,q12:2,m12:3,life:9,inTerr:9,
+   notes:"",
+   contacts:[{n:"Somchai Boonmee",j:"Managing Director",e:"somchai@siamprecision.co.th",p:true}]},
+  {id:"TR-01",name:"Anadolu Takım Tezgâhları A.Ş.",local:"Anadolu Takım Tezgâhları",type:"distributor",status:"active",terr:["TR"],owner:"u3",
+   cadence:30,last:41,excl:"exclusive",comm:8,curr:"USD",aend:69,astart:"06 Oct 2022",open:3,val:1450000,q12:5,m12:2,life:14,inTerr:14,
+   notes:"Strong in die & mould around Bursa. Overdue — chase this week.",
+   contacts:[{n:"Emre Yılmaz",j:"General Manager",e:"emre@anadolutt.com.tr",p:true},
+             {n:"Selin Demir",j:"Sales Manager",e:"selin@anadolutt.com.tr",p:false}]},
+  {id:"VN-01",name:"Trường Hải Machine Tools JSC",type:"representative",status:"prospective",terr:["VN"],owner:"u4",
+   cadence:null,last:null,excl:"non_exclusive",comm:null,curr:"USD",aend:null,astart:"—",open:0,val:0,q12:0,m12:0,life:0,inTerr:0,
+   notes:"Introduced at TIMTOS. No agreement signed yet.",
+   contacts:[{n:"Nguyễn Văn Hải",j:"Business Development",e:"hai@truonghai-mt.vn",p:true}]}
+];
+const CUSTOMERS = [
+  ["C-0001","Ege Kalıp Sanayi A.Ş.","TR","Bursa","die_mould","active","TR-01","u3",3],
+  ["C-0002","Marmara Aerospace Machining","TR","İstanbul","aerospace","prospect","TR-01","u3",1],
+  ["C-0003","Tata Precision Components Ltd.","IN","Pune","automotive","active","IN-01","u4",2],
+  ["C-0004","Hindustan Heavy Fabricators","IN","Coimbatore","heavy_machinery","active","IN-01","u4",2],
+  ["C-0005","Deccan Aero Systems Pvt. Ltd.","IN","Bengaluru","aerospace","prospect","IN-01","u4",1],
+  ["C-0006","Śląskie Formy Wtryskowe Sp. z o.o.","PL","Katowice","die_mould","active","PL-01","u3",2],
+  ["C-0007","PolAvia Aerostructures","PL","Rzeszów","aerospace","active","PL-01","u3",2],
+  ["C-0008","Bangkok Mould & Die Co., Ltd.","TH","Bangkok","die_mould","active","TH-01","u4",1],
+  ["C-0009","Eastern Seaboard Auto Parts","TH","Rayong","automotive","active","TH-01","u4",2],
+  ["C-0010","Grupo Industrial Querétaro","MX","Querétaro","automotive","prospect","MX-01","u3",1],
+  ["C-0011","Aeroestructuras del Norte S.A.","MX","Chihuahua","aerospace","prospect","MX-01","u3",1],
+  ["C-0012","Saigon Precision Engineering","VN","Ho Chi Minh City","general_subcontract","prospect","VN-01","u4",1],
+  ["C-0013","Hanoi Heavy Machinery JSC","VN","Hanoi","heavy_machinery","prospect","VN-01","u4",1],
+  ["C-0014","Bayerische Werkzeugbau GmbH","DE","Augsburg","die_mould","active","DE-01","u2",2],
+  ["C-0015","Rheinenergie Turbinen GmbH","DE","Essen","energy","active","DE-01","u2",2],
+  ["C-0016","Schwarzwald Aerospace GmbH","DE","Freiburg","aerospace","active","DE-01","u2",1],
+  ["C-0017","Nusantara Presisi Manufaktur","ID","Surabaya","general_subcontract","former","ID-01","u3",1],
+  ["C-0018","Jaya Energi Komponen","ID","Jakarta","energy","former","ID-01","u3",1],
+  ["C-0019","Precision Dynamics Corp.","US","Cincinnati","semiconductor","prospect",null,"u2",2],
+  ["C-0020","Anatolia Energy Systems","TR","İzmir","energy","active","TR-01","u3",2]
+].map(r=>({code:r[0],name:r[1],country:r[2],city:r[3],industry:r[4],type:r[5],agent:r[6],owner:r[7],contacts:r[8]}));
+
+const CONTACTS = [
+  ["Emre Yılmaz","General Manager","agent","TR-01","emre@anadolutt.com.tr",true],
+  ["Selin Demir","Sales Manager","agent","TR-01","selin@anadolutt.com.tr",false],
+  ["Rajesh Nair","Director","agent","IN-01","rajesh@bharatmt.in",true],
+  ["Tomasz Kowalski","Owner","agent","PL-01","tomasz@precyzja.pl",true],
+  ["Somchai Boonmee","Managing Director","agent","TH-01","somchai@siamprecision.co.th",true],
+  ["Carlos Mendoza","General Manager","agent","MX-01","carlos@maqcncbajio.mx",true],
+  ["Nguyễn Văn Hải","Business Development","agent","VN-01","hai@truonghai-mt.vn",true],
+  ["Klaus Bergmann","Geschäftsführer","agent","DE-01","bergmann@praez-wm.de",true],
+  ["Budi Santoso","Director","agent","ID-01","budi@karyapresisi.co.id",true],
+  ["Ahmet Öztürk","Plant Manager","customer","C-0001","ahmet@egekalip.com.tr",true],
+  ["Deniz Arslan","Production Engineer","customer","C-0001","deniz@egekalip.com.tr",false],
+  ["Hakan Çelik","Purchasing Manager","customer","C-0001","hakan@egekalip.com.tr",false],
+  ["Cem Yıldız","Head of Manufacturing","customer","C-0002","cem@marmara-aero.com",true],
+  ["Vikram Patel","VP Operations","customer","C-0003","vikram@tataprecision.in",true],
+  ["Anjali Rao","Purchase Head","customer","C-0003","anjali@tataprecision.in",false],
+  ["Suresh Kumar","Works Manager","customer","C-0004","suresh@hindustanheavy.in",true],
+  ["Priya Sharma","Finance Controller","customer","C-0004","priya@hindustanheavy.in",false],
+  ["Meera Iyer","Chief Engineer","customer","C-0005","meera@deccanaero.in",true],
+  ["Paweł Nowak","Dyrektor Produkcji","customer","C-0006","pawel@slaskieformy.pl",true],
+  ["Katarzyna Wójcik","Inżynier Procesu","customer","C-0006","kasia@slaskieformy.pl",false],
+  ["Marek Zieliński","Head of Machining","customer","C-0007","marek@polavia.pl",true],
+  ["Anna Lewandowska","Quality Manager","customer","C-0007","anna@polavia.pl",false],
+  ["Preecha Wong","Owner","customer","C-0008","preecha@bkkmould.co.th",true],
+  ["Nattapong Sri","Engineering Lead","customer","C-0009","nattapong@esbautoparts.co.th",true],
+  ["Wanida Chai","Purchasing","customer","C-0009","wanida@esbautoparts.co.th",false],
+  ["José Luis Ramírez","Director de Planta","customer","C-0010","jlramirez@giqueretaro.mx",true],
+  ["María Fernanda Ruiz","Ingeniera de Manufactura","customer","C-0011","mfruiz@aeronorte.mx",true],
+  ["Trần Thị Mai","Production Head","customer","C-0012","mai@saigonprecision.vn",true],
+  ["Lê Quốc Anh","Chief Engineer","customer","C-0013","anh@hanoiheavy.vn",true],
+  ["Stefan Huber","Werkleiter","customer","C-0014","huber@bayer-wkzbau.de",true],
+  ["Petra Wolf","Fertigungsplanung","customer","C-0014","wolf@bayer-wkzbau.de",false],
+  ["Dr. Michael Schneider","Head of Turbine Machining","customer","C-0015","schneider@rheinenergie-tb.de",true],
+  ["Julia Fischer","Einkauf","customer","C-0015","fischer@rheinenergie-tb.de",false],
+  ["Thomas Braun","Manufacturing Director","customer","C-0016","braun@schwarzwald-aero.de",true],
+  ["Agus Wijaya","Plant Head","customer","C-0017","agus@nusantarapresisi.co.id",true],
+  ["Dewi Lestari","Procurement","customer","C-0018","dewi@jayaenergi.co.id",true],
+  ["Robert Miller","Director of Operations","customer","C-0019","rmiller@precisiondynamics.com",true],
+  ["Sarah Collins","Process Engineer","customer","C-0019","scollins@precisiondynamics.com",false],
+  ["Burak Şahin","Maintenance Manager","customer","C-0020","burak@anatoliaenergy.com.tr",true],
+  ["Elif Kaya","Manufacturing Engineer","customer","C-0020","elif@anatoliaenergy.com.tr",false]
+].map(r=>({name:r[0],job:r[1],ptype:r[2],pcode:r[3],email:r[4],primary:r[5]}));
+
+const QUOTE = {
+  ref:"Q07082026DG01", date:"07 Aug 2026", status:"issued", rev:1,
+  to:"Anadolu Takım Tezgâhları A.Ş.", customer:"Ege Kalıp Sanayi A.Ş.",
+  model:"KMC-318HMA15", currency:"USD", base:1250000,
+  machineType:"KAO MING BRAND DOUBLE COLUMN MULTI-CENTER",
+  heading:["with FANUC 0iMF Plus controller, auto 90 degree index angular head",
+           "V/H tool change system and standard accessories"],
+  payment:"30% with order, 70% before shipment",
+  place:"FOB TAIWAN", time:"8–10 months after order", validity:"3 months",
+  spec:[
+    ["X/Y/Z-axis travel","3,000 mm / 1,800 mm / 1,000 mm"],
+    ["Distance between two columns","1,800 mm"],
+    ["Spindle taper","BBT-50"],
+    ["Distance from spindle nose to table surface","150–1150 mm"],
+    ["Main spindle motor","120 Nm / 45 kW"],
+    ["Spindle speed (V/H)","6,000 rpm / 3,500 rpm"],
+    ["Tool magazine capacity","30 ATC standard"],
+    ["Table area","3,000 × 1,600 mm"],
+    ["Max. table loading","8 t"],
+    [null,"Fully enclosed splash guard"]
+  ],
+  options:[["Linear scales (X/Y/Z)",38000],["Coolant through spindle, 20 bar",21000]],
+  std:["Heat exchanger for electrical cabinet","Automatic lubrication system","Work lamp",
+       "Levelling bolts and blocks","Tool box and tool kit","Operation and maintenance manuals"],
+  remarks:["The price is Net price and without installation and adjusting charge",
+           "User site requires necessary suitable equipments instrument for installation",
+           "Machine dismounted during transporation(it depends packing size to adjust)",
+           "Please refer to our brochure for all the specification and stanard accessories."],
+  manager:"C. H. Lin", preparer:"Deepan Goswami", dept:"International Business Development"
+};
+QUOTE.total = QUOTE.base + QUOTE.options.reduce((s,o)=>s+o[1],0);
+
+/* ══════════════ helpers ══════════════ */
+const num = n => new Intl.NumberFormat("en-US",{maximumFractionDigits:0}).format(n);
+const agentById = id => AGENTS.find(a=>a.id===id);
+const isOverdue = a => a.last!=null && a.cadence!=null && a.last > a.cadence;
+const statusTone = s => s==="active" ? "active" : (s==="probation"||s==="prospective") ? "warn" : "muted";
+const pill = (txt,tone)=>`<span class="pill ${tone||""}">${esc(txt)}</span>`;
+
+let route = {name:"agents", id:null};
+const view = document.getElementById("view");
+
+/* ══════════════ views ══════════════ */
+function listShell(title, count, bodyHTML, toolbar){
+  return `<div class="pagehead"><h1>${esc(title)}</h1><span class="count">${count}</span></div>
+  ${toolbar ? `<div class="toolbar">${toolbar}</div>` : ""}
+  <div class="tablewrap">${bodyHTML}</div>
+  <p class="footnote">${esc(t("demo.foot"))}</p>`;
+}
+
+function viewAgents(){
+  const rows = AGENTS.map(a=>{
+    const od = isOverdue(a);
+    return `<tr data-open="agent" data-id="${a.id}">
+      <td class="mono strong">${a.id}</td>
+      <td><div class="stack"><span class="strong">${esc(a.name)}</span>${a.local?`<span class="sec">${esc(a.local)}</span>`:""}</div></td>
+      <td style="color:var(--grey-mute)">${esc(e("agentType",a.type))}</td>
+      <td>${pill(e("agentStatus",a.status),statusTone(a.status))}</td>
+      <td>${a.terr.map(c=>esc(e("country",c))).join(", ")}</td>
+      <td style="color:var(--grey-mute)">${esc(USERS[a.owner].n)}</td>
+      <td class="mono r ${od?"over":""}">${a.last==null?"—":`${a.last} ${esc(t("days"))}${od?" ▲":""}`}</td>
+      <td class="mono r">${a.open}</td></tr>`;
+  }).join("");
+  return listShell(t("nav.agents"), `${AGENTS.length} of ${AGENTS.length}`,
+    `<table><thead><tr>
+      <th>${esc(t("col.code"))}</th><th>${esc(t("col.company"))}</th><th>${esc(t("col.type"))}</th>
+      <th>${esc(t("col.status"))}</th><th>${esc(t("col.terr"))}</th><th>${esc(t("col.owner"))}</th>
+      <th class="r">${esc(t("col.last"))}</th><th class="r">${esc(t("col.open"))}</th>
+    </tr></thead><tbody>${rows}</tbody></table>`);
+}
+
+function viewAgent(id){
+  const a = agentById(id); if(!a) return viewAgents();
+  const od = isOverdue(a), odBy = od ? a.last - a.cadence : 0;
+  const soon = a.aend!=null && a.aend<=90 && a.aend>=0;
+  const banners = [
+    od   ? `<div class="banner alert">${esc(t("overdue"))} — ${esc(t("overdueBy").replace("{d}",odBy))}</div>`:"",
+    soon ? `<div class="banner alert">${esc(t("agreeExp").replace("{d}",a.aend))}</div>`:""
+  ].join("");
+  const stat = (k,v,al)=>`<div class="cell"><span class="k">${esc(k)}</span><span class="v ${al?"alert":""}">${esc(v)}</span></div>`;
+  return `<div class="record">
+    <div class="crumb"><button class="back" data-go="agents">← ${esc(t("nav.agents"))}</button></div>
+    <section class="nameplate">
+      <div class="toprule"></div>
+      <div class="body">
+        <div class="eyebrow">${esc(t("nav.agents"))} · ${a.id}</div>
+        <div class="row" style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+          <div class="title">${esc(a.name)}</div>
+          ${a.local?`<div class="subtitle">${esc(a.local)}</div>`:""}
+        </div>
+        <dl class="grid">
+          <div><dt>${esc(t("f.status"))}</dt><dd>${esc(e("agentStatus",a.status))}</dd></div>
+          <div><dt>${esc(t("f.type"))}</dt><dd>${esc(e("agentType",a.type))}</dd></div>
+          <div><dt>${esc(t("f.terr"))}</dt><dd>${a.terr.join(" · ")}</dd></div>
+          <div><dt>${esc(t("f.owner"))}</dt><dd>${esc(USERS[a.owner].n)}</dd></div>
+          <div><dt>${esc(t("f.cadence"))}</dt><dd>${a.cadence ?? "—"}</dd></div>
+          <div><dt>${esc(t("f.last"))}</dt><dd>${a.last==null?"—":`${a.last} ${esc(t("days"))}`}</dd></div>
+        </dl>
+      </div>
+    </section>
+    ${banners}
+    <div class="label" style="margin-top:16px">${esc(t("sec.perf"))}</div>
+    <div class="strip">
+      ${stat(t("p.open"),a.open)}
+      ${stat(t("p.value"), a.val?`USD ${num(a.val)}`:"—")}
+      ${stat(t("p.quotes"),a.q12)}
+      ${stat(t("p.m12"),a.m12)}
+      ${stat(t("p.life"),a.life)}
+      ${stat(t("p.terr"),a.inTerr)}
+      ${stat(t("p.days"), a.last ?? "—", od)}
+    </div>
+    <div class="cards">
+      <section class="card">
+        <h2 class="label">${esc(t("sec.identity"))}</h2>
+        <dl class="dl">
+          <div><dt>${esc(t("f.excl"))}</dt><dd>${esc(e("excl",a.excl))}</dd></div>
+          <div><dt>${esc(t("f.comm"))}</dt><dd>${a.comm!=null?a.comm+"%":"—"}</dd></div>
+          <div><dt>${esc(t("f.disc"))}</dt><dd>—</dd></div>
+          <div><dt>${esc(t("f.basis"))}</dt><dd>${esc(e("basis","commission_on_invoice"))}</dd></div>
+          <div><dt>${esc(t("f.curr"))}</dt><dd>${a.curr}</dd></div>
+          <div><dt>${esc(t("f.pay"))}</dt><dd>—</dd></div>
+          <div><dt>${esc(t("f.astart"))}</dt><dd>${esc(a.astart)}</dd></div>
+          <div><dt>${esc(t("f.aend"))}</dt><dd>${a.aend==null?"—":(a.aend<0?"lapsed":"in "+a.aend+" d")}</dd></div>
+        </dl>
+      </section>
+      <section class="card">
+        <h2 class="label">${esc(t("sec.contacts"))} <span class="count">${a.contacts.length}</span></h2>
+        <table class="minitable"><tbody>
+          ${a.contacts.map(c=>`<tr>
+            <td class="strong">${esc(c.n)} ${c.p?pill(t("primary"),"active"):""}</td>
+            <td style="color:var(--grey-mute)">${esc(c.j)}</td>
+            <td class="mono" style="color:var(--grey-mute)">${esc(c.e)}</td></tr>`).join("")}
+        </tbody></table>
+      </section>
+    </div>
+    ${a.notes?`<section class="card" style="margin-top:16px"><h2 class="label">${esc(t("sec.notes"))}</h2><p style="margin:0">${esc(a.notes)}</p></section>`:""}
+    <p class="footnote" style="padding-left:0;padding-right:0">${esc(t("demo.foot"))}</p>
+  </div>`;
+}
+
+function viewCustomers(){
+  const rows = CUSTOMERS.map(c=>`<tr>
+    <td class="mono strong">${c.code}</td>
+    <td class="strong">${esc(c.name)}</td>
+    <td><span class="mono" style="color:var(--grey-mute)">${c.country}</span> ${esc(e("country",c.country))}</td>
+    <td style="color:var(--grey-mute)">${esc(e("industry",c.industry))}</td>
+    <td>${pill(e("ctype",c.type), c.type==="active"?"active":c.type==="prospect"?"warn":"muted")}</td>
+    <td class="mono">${c.agent ?? "—"}</td>
+    <td style="color:var(--grey-mute)">${esc(USERS[c.owner].n)}</td>
+    <td class="mono r">${c.contacts}</td></tr>`).join("");
+  return listShell(t("nav.customers"), `${CUSTOMERS.length} of ${CUSTOMERS.length}`,
+    `<table><thead><tr>
+      <th>${esc(t("col.ccode"))}</th><th>${esc(t("col.company"))}</th><th>${esc(t("col.country"))}</th>
+      <th>${esc(t("col.industry"))}</th><th>${esc(t("col.type"))}</th><th>${esc(t("col.agent"))}</th>
+      <th>${esc(t("col.owner"))}</th><th class="r">${esc(t("col.contacts"))}</th>
+    </tr></thead><tbody>${rows}</tbody></table>`);
+}
+
+function viewContacts(){
+  const rows = CONTACTS.map(c=>{
+    const parent = c.ptype==="agent" ? agentById(c.pcode)?.name : CUSTOMERS.find(x=>x.code===c.pcode)?.name;
+    return `<tr>
+      <td><span class="strong">${esc(c.name)}</span> ${c.primary?pill(t("primary"),"active"):""}</td>
+      <td style="color:var(--grey-mute)">${esc(c.job)}</td>
+      <td>${pill(e("parent",c.ptype))}</td>
+      <td><div class="stack"><span>${esc(parent||"—")}</span><span class="sec">${c.pcode}</span></div></td>
+      <td class="mono" style="color:var(--grey-mute)">${esc(c.email)}</td></tr>`;
+  }).join("");
+  return listShell(t("nav.contacts"), `${CONTACTS.length} of ${CONTACTS.length}`,
+    `<table><thead><tr>
+      <th>${esc(t("col.name"))}</th><th>${esc(t("col.job"))}</th><th>${esc(t("col.belongs"))}</th>
+      <th>${esc(t("col.parent"))}</th><th>${esc(t("col.email"))}</th>
+    </tr></thead><tbody>${rows}</tbody></table>`);
+}
+
+function viewQuotations(){
+  const rows = `<tr data-open="quote">
+    <td class="mono strong">${QUOTE.ref}</td>
+    <td>${esc(QUOTE.customer)}</td>
+    <td class="mono" style="color:var(--grey-mute)">${QUOTE.model}</td>
+    <td>${pill(e("qstatus",QUOTE.status),"active")}</td>
+    <td class="mono" style="color:var(--grey-mute)">${QUOTE.date}</td>
+    <td class="mono r">${num(QUOTE.total)} ${QUOTE.currency}</td></tr>`;
+  return listShell(t("nav.quotations"), "1",
+    `<table><thead><tr>
+      <th>${esc(t("col.ref"))}</th><th>${esc(t("col.customer"))}</th><th>${esc(t("col.machine"))}</th>
+      <th>${esc(t("col.status"))}</th><th>${esc(t("col.issued"))}</th><th class="r">${esc(t("col.total"))}</th>
+    </tr></thead><tbody>${rows}</tbody></table>`);
+}
+
+function viewQuote(){
+  const q = QUOTE;
+  const money = v => v==null ? "TBD" : `${num(v)} ${q.currency}`;
+  return `<div class="printbar">
+      <button class="back" data-go="quotations">← ${esc(t("nav.quotations"))}</button>
+      <span class="pill active" style="border-color:rgba(237,239,241,.3);background:transparent;color:var(--paper)">${esc(e("qstatus","issued"))}</span>
+      <span style="margin-left:auto"></span>
+      <button class="btn primary" onclick="window.print()">${esc(t("q.print"))}</button>
+    </div>
+    <div class="sheet">
+      <h1>QUOTATION</h1>
+      <div class="row"><div><span class="k">REF:</span> <span class="mono">${q.ref}</span></div>
+        <div><span class="k">Date:</span> <span class="mono">${q.date}</span></div></div>
+      <div style="margin-top:4px"><span class="k">To:</span> ${esc(q.to)}</div>
+      <p style="margin:8px 0 0">As your request , we will be pleased to offer our following quotation for your reference</p>
+      <div class="kv">
+        <div class="k">Machine Type :</div><div>${esc(q.machineType)}</div>
+        <div class="k">Terms of Payment :</div><div>${esc(q.payment)}</div>
+        <div class="k">Place of Delivery:</div><div>${esc(q.place)}</div>
+        <div class="k">Time of Delivery:</div><div>${esc(q.time)}</div>
+        <div class="k">Validity time:</div><div>${esc(q.validity)}</div>
+      </div>
+      <div class="band row">
+        <div>${q.heading.map(h=>`<div>${esc(h)}</div>`).join("")}</div>
+        <div class="k" style="white-space:nowrap">Unit Price US$</div>
+      </div>
+      <div class="row" style="margin-top:4px">
+        <div class="k">Model: <span class="mono">${q.model}</span></div>
+        <div class="mono">${money(q.base)}</div>
+      </div>
+      <div class="spec" style="margin-top:2px">
+        ${q.spec.map(s=>`<div>${s[0]?`${esc(s[0])}: `:""}${esc(s[1])}</div>`).join("")}
+      </div>
+      <div class="sec">Optional Accessories</div>
+      ${q.options.map(o=>`<div class="row"><div>${esc(o[0])}</div><div class="mono">${money(o[1])}</div></div>`).join("")}
+      <div class="total"><div>TOTAL PRICE FOB TAIWAN (NET)</div><div class="mono">${money(q.total)}</div></div>
+      <div class="sec">Standard Accessories</div>
+      ${q.std.map(s=>`<div>${esc(s)}</div>`).join("")}
+      <div style="margin-top:12px">
+        ${q.remarks.map((r,i)=>`<div>Remark: ${i+1}.${esc(r)}</div>`).join("")}
+      </div>
+      <div class="end">---------------------------------END---------------------------------</div>
+      <div style="margin-top:12px">
+        <div class="k">KAO MING MACHINERY INDUSTRIAL CO.,LTD.</div>
+        <div style="margin-top:12px">${esc(q.manager)} <span class="muted">(Section Manager)</span></div>
+        <div>${esc(q.preparer)} <span class="muted">(${esc(q.dept)})</span></div>
+      </div>
+    </div>
+    <p class="footnote" style="text-align:center">${esc(t("demo.foot"))}</p>`;
+}
+
+function viewUsers(){
+  const rows = Object.entries(USERS).map(([k,u])=>`<tr>
+    <td class="mono strong">${k==="u1"?"deepan":k==="u2"?"lchen":k==="u3"?"mkaya":k==="u4"?"awong":k==="u5"?"jhsu":"director"}</td>
+    <td class="strong">${esc(u.n)}</td>
+    <td>${esc(e("role",u.r))}</td>
+    <td>${pill(e("ustatus","active"),"active")}</td></tr>`).join("");
+  return listShell(t("nav.users"), String(Object.keys(USERS).length),
+    `<table><thead><tr>
+      <th>${esc(t("col.username"))}</th><th>${esc(t("col.name"))}</th>
+      <th>${esc(t("col.role"))}</th><th>${esc(t("col.status"))}</th>
+    </tr></thead><tbody>${rows}</tbody></table>`);
+}
+
+function viewSettings(){
+  const f = (k,v)=>`<div class="field"><span class="label">${esc(k)}</span><div class="input mono" style="display:flex;align-items:center">${esc(v)}</div></div>`;
+  return `<div class="record">
+    <h1 style="font-size:19px;margin:0">${esc(t("set.title"))}</h1>
+    <p style="color:var(--grey-mute);margin:4px 0 20px">${esc(t("set.sub"))}</p>
+    <section class="card">
+      <h2 class="label">${esc(t("set.commercial"))}</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        ${f("Default Incoterms","FOB")}${f("Default named place","Keelung, Taiwan")}
+        ${f("Default payment terms","30% with order, 70% before shipment")}${f("Quotation validity (days)","30")}
+        ${f("Default currency","USD")}${f("Quotation number format","Q{ddmmyyyy}{initials}{NN}")}
+        ${f("Warranty period (months)","12")}${f("Warranty starts from","Shipment")}
+      </div>
+    </section>
+    <section class="card" style="margin-top:16px">
+      <h2 class="label">${esc(t("set.reminders"))}</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        ${f("Agent cadence default (days)","30")}${f("Opportunity inactivity threshold (days)","30")}
+      </div>
+    </section>
+    <p class="footnote" style="padding-left:0;padding-right:0">${esc(t("demo.foot"))}</p>
+  </div>`;
+}
+
+function viewSearch(q){
+  const term = q.toLowerCase();
+  const A = AGENTS.filter(a=>(a.id+a.name).toLowerCase().includes(term));
+  const C = CUSTOMERS.filter(c=>(c.code+c.name+c.city).toLowerCase().includes(term));
+  const P = CONTACTS.filter(c=>(c.name+c.email).toLowerCase().includes(term));
+  const total = A.length+C.length+P.length;
+  if(!total) return `<div class="record"><div class="empty"><div class="rule"></div>
+    <h2>${esc(t("empty.search"))}</h2><p>${esc(t("noresult").replace("{q}",q))}</p></div></div>`;
+  const grp = (title,items)=> items.length ? `<section style="margin-top:20px">
+      <div class="label" style="margin-bottom:6px">${esc(title)} · ${items.length}</div>
+      <div class="card" style="padding:0">${items.join("")}</div></section>`:"";
+  const row = (code,name,meta,open)=>`<div ${open||""} style="display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid rgba(205,210,214,.6);cursor:pointer">
+      <span class="mono" style="width:88px;flex-shrink:0">${esc(code)}</span>
+      <span class="strong" style="flex:1">${esc(name)}</span>${pill(meta,"muted")}</div>`;
+  return `<div class="record">
+    <h1 style="font-size:19px;margin:0">${esc(t("nav.search"))}</h1>
+    <p class="count" style="margin-top:4px">${total} · “${esc(q)}”</p>
+    ${grp(t("nav.agents"), A.map(a=>row(a.id,a.name,e("agentStatus",a.status),`data-open="agent" data-id="${a.id}"`)))}
+    ${grp(t("nav.customers"), C.map(c=>row(c.code,c.name,e("country",c.country))))}
+    ${grp(t("nav.contacts"), P.map(c=>row("",c.name,c.job)))}
+  </div>`;
+}
+
+/* ══════════════ router ══════════════ */
+function render(){
+  let html;
+  switch(route.name){
+    case "agent":      html = viewAgent(route.id); break;
+    case "customers":  html = viewCustomers();     break;
+    case "contacts":   html = viewContacts();      break;
+    case "quotations": html = viewQuotations();    break;
+    case "quote":      html = viewQuote();         break;
+    case "users":      html = viewUsers();         break;
+    case "settings":   html = viewSettings();      break;
+    case "search":     html = viewSearch(route.id);break;
+    default:           html = viewAgents();
+  }
+  view.innerHTML = html;
+  view.scrollTop = 0;
+  const active = route.name==="agent" ? "agents" : route.name==="quote" ? "quotations" : route.name;
+  document.querySelectorAll(".navitem").forEach(b=>{
+    b.classList.toggle("active", b.dataset.go===active);
+  });
+}
+function go(name,id){ route={name,id:id??null}; render(); }
+
+/* language */
+function applyLang(){
+  document.documentElement.lang = lang==="zh" ? "zh-Hant" : "en";
+  document.querySelectorAll("[data-t]").forEach(el=>{ el.textContent = t(el.dataset.t); });
+  document.querySelectorAll("[data-t-html]").forEach(el=>{ el.innerHTML = t(el.dataset.tHtml); });
+  document.querySelectorAll("[data-ph]").forEach(el=>{ el.placeholder = t(el.dataset.ph); });
+  document.querySelectorAll("[data-lang]").forEach(b=>{
+    b.setAttribute("aria-pressed", String(b.dataset.lang===lang));
+  });
+  if(document.getElementById("app").classList.contains("on")) render();
+}
+document.addEventListener("click", ev=>{
+  const lb = ev.target.closest("[data-lang]");
+  if(lb){ lang = lb.dataset.lang; applyLang(); return; }
+  const nav = ev.target.closest("[data-go]");
+  if(nav){ go(nav.dataset.go); return; }
+  const open = ev.target.closest("[data-open]");
+  if(open){
+    if(open.dataset.open==="agent") go("agent", open.dataset.id);
+    else if(open.dataset.open==="quote") go("quote");
+  }
+});
+document.getElementById("loginform").addEventListener("submit", ev=>{
+  ev.preventDefault();
+  document.getElementById("login").style.display="none";
+  document.getElementById("app").classList.add("on");
+  go("agents");
+});
+document.getElementById("signout").addEventListener("click", ()=>{
+  document.getElementById("app").classList.remove("on");
+  document.getElementById("login").style.display="grid";
+});
+const gs = document.getElementById("gsearch");
+gs.addEventListener("keydown", ev=>{
+  if(ev.key==="Enter"){
+    const v = gs.value.trim();
+    if(v) go("search", v);
+  }
+});
+applyLang();
+</script>
