@@ -3,7 +3,7 @@ services:
     name: kaoming-crm-preview
     runtime: docker
     plan: free
-    region: singapore
+    region: ohio
     dockerfilePath: ./Dockerfile
     dockerContext: .
     dockerCommand: sh scripts/start-hosted.sh

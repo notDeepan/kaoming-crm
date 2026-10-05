@@ -14,8 +14,9 @@ administrator and fixed document categories. It is separate from the local CRM.
 
 ## Create the online preview
 
-1. Create a **private** Neon project/database in the Singapore region if available.
-   Copy its pooled PostgreSQL connection string with TLS (`sslmode=require`).
+1. Create a Neon project/database in the same region as the Render web service
+   (Ohio for the supplied Blueprint). Copy its pooled PostgreSQL connection
+   string with TLS (`sslmode=require`).
    Never paste it into GitHub or `render.yaml`.
 2. In Render, connect the public GitHub repository and create a Blueprint from
    `render.yaml`. Choose the Free web plan if it is offered. The Blueprint asks
