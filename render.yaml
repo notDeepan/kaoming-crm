@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: kaoming-crm-preview
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: sh scripts/start-hosted.sh
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+      - key: DEFAULT_LOCALE
+        value: en
+      - key: TZ
+        value: Asia/Taipei

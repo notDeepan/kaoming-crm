@@ -1,8 +1,16 @@
-import { getRequestConfig } from "next-intl/server";
-import { getLocale } from "./locale";
+import { cookies } from 'next/headers';
+import { getRequestConfig } from 'next-intl/server';
+import { chineseMessages, englishMessages } from './messages';
 
 export default getRequestConfig(async () => {
-  const locale = await getLocale();
-  const messages = (await import(`../../messages/${locale}.json`)).default;
-  return { locale, messages };
+  const cookieStore = await cookies();
+  const stored = cookieStore.get('km-locale')?.value;
+  const locale = stored === 'en' || stored === 'zh-Hant'
+    ? stored
+    : process.env.DEFAULT_LOCALE === 'zh-Hant' ? 'zh-Hant' : 'en';
+
+  return {
+    locale,
+    messages: locale === 'zh-Hant' ? chineseMessages : englishMessages,
+  };
 });

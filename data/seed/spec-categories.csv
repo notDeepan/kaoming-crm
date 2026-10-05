@@ -1,0 +1,14 @@
+code,name_en,name_zh,sort_order,appears_on
+standard_accessories,Standard accessories,標準附件,10,"quotation,proposal,spec_sheet"
+spindle,Spindle,主軸,20,"quotation,proposal,spec_sheet"
+tool_magazine,Tool magazine and guard,刀庫及護罩,30,"quotation,proposal,spec_sheet"
+controller,Controller and CRT,控制器及CRT,40,"quotation,proposal,spec_sheet"
+travels,Axis travels,行程,50,"quotation,proposal,spec_sheet"
+table,Table,工作台,60,"quotation,proposal,spec_sheet"
+coolant,Coolant system,冷卻系統,70,"quotation,proposal,spec_sheet"
+chip_conveyor,Chip conveyor,排屑機,80,"quotation,proposal,spec_sheet"
+attachment_head,Attachment head,附件頭,90,"quotation,proposal,spec_sheet"
+electrical,Electrical supply,電壓,100,"proposal,spec_sheet"
+compliance,Compliance and nameplate,規格及銘牌文字,110,"proposal,spec_sheet"
+colour,Colour,顏色,120,spec_sheet
+special,Special accessories,特別附件,130,"quotation,proposal,spec_sheet"

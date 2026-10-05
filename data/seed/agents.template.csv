@@ -1,0 +1,3 @@
+code,name,country_code,region,relationship_type,commission_model,exclusivity,voltage,frequency,phase,ce_variant,label_languages,nameplate_required,contract_start,contract_end,notice_period_days,commission_rate,commission_base
+A11004,CP Agencies,IN,south_asia,distributor,markup,non_exclusive,415V,50HZ,3相,non_eu,English,true,2019-04-01,2027-03-31,90,,
+A16001,TEZMAKSAN,TR,europe,distributor,markup,exclusive,380V,50HZ,3相,ce_turkey,"Turkish,English",true,2021-10-01,2027-09-30,90,,

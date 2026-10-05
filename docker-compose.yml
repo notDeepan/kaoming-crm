@@ -1,37 +1,77 @@
-# One command to move from laptop to the Houli server. Not used for local evaluation, which runs
-# on SQLite with `npm run dev`. On the server, switch the datasource provider to postgresql and
-# run `prisma migrate deploy` on first boot.
 services:
-  db:
-    image: postgres:16
+  migrate:
+    build:
+      context: .
+      target: migrate
+    depends_on:
+      postgres: { condition: service_healthy }
     environment:
-      POSTGRES_USER: kmc
-      POSTGRES_PASSWORD: kmc
-      POSTGRES_DB: kmc
-    volumes:
-      - db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kmc"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      DATABASE_URL: postgres://kaoming:${DB_PASSWORD}@postgres:5432/kaoming
+    restart: "no"
 
   app:
-    build: .
+    build:
+      context: .
+      target: runtime
     depends_on:
-      db:
-        condition: service_healthy
+      migrate: { condition: service_completed_successfully }
     environment:
-      DATABASE_URL: "postgresql://kmc:kmc@db:5432/kmc?schema=public"
-      SESSION_SECRET: "change-me-in-production-a-long-random-32b+"
-      STORAGE_ROOT: "/data/storage"
-      NODE_ENV: production
-    ports:
-      - "3000:3000"
+      DATABASE_URL: postgres://kaoming:${DB_PASSWORD}@postgres:5432/kaoming
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_URL: ${AUTH_URL}
+      DEFAULT_LOCALE: ${DEFAULT_LOCALE:-en}
+      TZ: Asia/Taipei
+    ports: ["127.0.0.1:3000:3000"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  jobs:
+    build:
+      context: .
+      target: runtime
+    command: ["npm", "run", "jobs:worker"]
+    depends_on:
+      app: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://kaoming:${DB_PASSWORD}@postgres:5432/kaoming
+      TZ: Asia/Taipei
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: kaoming
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: kaoming
+      TZ: Asia/Taipei
     volumes:
-      # Documents live outside the web root (DM-01 / SE-12), on a persistent volume.
-      - doc-storage:/data/storage
+      - pgdata:/var/lib/postgresql/data
+      - ./backup:/backup
+    ports: ["127.0.0.1:5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kaoming -d kaoming"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      app: { condition: service_healthy }
+    environment:
+      CRM_DOMAIN: ${CRM_DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddydata:/data
+    ports: ["80:80", "443:443"]
+    restart: unless-stopped
 
 volumes:
-  db-data:
-  doc-storage:
+  pgdata:
+  caddydata:

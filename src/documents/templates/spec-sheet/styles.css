@@ -1,0 +1,18 @@
+@page { size: A4 portrait; margin: 11mm 12mm 17mm; }
+* { box-sizing: border-box; }
+html, body { margin: 0; color: #111; font-family: "Noto Sans TC", sans-serif; font-size: 9px; }
+.sheet { position: relative; min-height: 265mm; }
+header { position: relative; border-bottom: 1.5px solid #111; text-align: center; height: 29mm; padding-top: 4mm; }
+.company { font-size: 13px; font-weight: 700; }
+.title { margin-top: 2mm; font-size: 18px; font-weight: 700; letter-spacing: 3px; }
+.header-meta { position: absolute; right: 0; top: 0; font-size: 8px; line-height: 1.7; text-align: right; }
+.metadata { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid #333; margin-top: 4mm; }
+.metadata > div { min-height: 7mm; border-right: 1px solid #555; border-bottom: 1px solid #555; padding: 1.5mm; }
+.metadata .span2 { grid-column: span 2; }
+.model { position: relative; border: 1px solid #333; margin-top: 4mm; padding: 3mm 2mm; line-height: 2; font-size: 11px; font-weight: 700; }
+.model span { float: right; }
+table { border-collapse: collapse; width: 100%; margin-top: 5mm; table-layout: fixed; }
+th, td { border: 1px solid #333; padding: 2mm; vertical-align: top; overflow-wrap: anywhere; white-space: pre-wrap; }
+th { width: 27%; text-align: left; background: #f6f6f6; }
+.manifest { border: 1px solid #333; margin-top: 5mm; padding: 2mm; }
+footer { position: absolute; bottom: 4mm; left: 0; right: 0; display: flex; justify-content: space-between; }

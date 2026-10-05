@@ -1,0 +1,2 @@
+CREATE TYPE "public"."booking_delay_cause" AS ENUM('payment_outstanding', 'forwarder_lead_time', 'space_rejected', 'documentation', 'customer_change', 'other', 'unclassified');--> statement-breakpoint
+ALTER TABLE "shipments" ADD COLUMN "booking_delay_cause" "booking_delay_cause";

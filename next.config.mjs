@@ -1,15 +1,9 @@
-import createNextIntlPlugin from "next-intl/plugin";
-
-const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
-
-/** @type {import('next').NextConfig} */
+// The app uses next-intl's request config, not its optional message extraction.
+// Resolve the request config directly so builds do not load the extraction SWC addon.
 const nextConfig = {
   reactStrictMode: true,
-  // Lean server bundle for the Docker image (the eventual move to the Houli server).
-  output: "standalone",
-  serverExternalPackages: ["@node-rs/argon2", "@prisma/client"],
-  // Two lockfiles exist on this machine; pin the tracing root to this project.
-  outputFileTracingRoot: import.meta.dirname,
+  experimental: { serverActions: { bodySizeLimit: '12mb' } },
+  turbopack: { resolveAlias: { 'next-intl/config': './src/i18n/request.ts' } },
 };
 
-export default withNextIntl(nextConfig);
+export default nextConfig;

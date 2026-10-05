@@ -1,0 +1,1 @@
+ALTER TABLE "claims" ADD COLUMN "next_action" text;

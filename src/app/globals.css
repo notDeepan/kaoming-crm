@@ -2,84 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    color-scheme: light;
-  }
-
-  html,
-  body {
-    height: 100%;
-  }
-
-  body {
-    @apply bg-paper text-ink antialiased;
-    font-feature-settings: "cv05" 1;
-  }
-
-  button,
-  a,
-  [role="link"] {
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  h1,
-  h2 {
-    text-wrap: balance;
-  }
-
-  /* Every identifier and number is monospace with tabular figures, so columns of
-     numbers line up for comparison — the core "instrument" decision. */
-  .mono,
-  .tnum {
-    font-family: var(--font-plex-mono), ui-monospace, monospace;
-    font-feature-settings: "tnum" 1;
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* Visible, unmistakable focus — this tool is driven by keyboard. */
-  :focus-visible {
-    outline: 2px solid theme("colors.kmc.DEFAULT");
-    outline-offset: 1px;
-  }
-
-  ::selection {
-    background: theme("colors.kmc.wash");
-  }
-
-  /* Motion communicates state change only; honour the OS preference. */
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.001ms !important;
-      transition-duration: 0.001ms !important;
-    }
-  }
+:root {
+  color-scheme: light;
+  font-family: Arial, 'Noto Sans TC', sans-serif;
 }
 
-@layer components {
-  /* Uppercase mono label — the engineering-drawing caption. */
-  .label {
-    @apply text-2xs uppercase text-grey-mute mono;
-  }
+body {
+  margin: 0;
+  background: #f6f8fb;
+  color: #172436;
+}
 
-  /* A field value in the title block. */
-  .value-mono {
-    @apply text-sm text-ink mono;
-  }
+button, input, select, textarea {
+  font: inherit;
+}
 
-  /* Row-commit flash: a brief brand wash when a record saves. */
-  @keyframes commit {
-    0% {
-      background-color: theme("colors.kmc.wash");
-    }
-    100% {
-      background-color: transparent;
-    }
-  }
-  .commit-flash {
-    animation: commit 900ms ease-out;
-  }
+:focus-visible {
+  outline: 3px solid #bd8b45;
+  outline-offset: 2px;
 }

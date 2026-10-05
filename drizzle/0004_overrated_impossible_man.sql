@@ -1,0 +1,1 @@
+ALTER TABLE "technical_proposals" ADD COLUMN "pdf_base64" text;

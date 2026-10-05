@@ -1,0 +1,11 @@
+code,name_en,name_zh,item_type,spec_category,machine_model,unit,is_standard_accessory,spec_override_en,spec_override_zh
+KMC-637AS,KMC-637AS base machine,龍門式加工中心機〈五軸〉,machine,,KMC-637AS,台,false,,
+OPT-ZW11,Z / W travel upgrade to 1100 / 1500mm,Z / W 軸行程升級,spec_change,travels,KMC-637AS,式,false,Z travel 1100 mm / W travel 1500 mm,Z 軸行程 1100 mm / W 軸行程 1500 mm
+OPT-AUH,Automatic universal head A&C axis 1 degree index,自動萬向頭 A/C 軸 1度分度,accessory,attachment_head,,式,false,,
+OPT-CTS40,Coolant through spindle 40bar with 1000L tank,主軸中心出水 40BAR 附 1000L 水箱,accessory,coolant,,式,false,,
+OPT-CHIP,Link type chip conveyor,鍊式鐵屑輸送機,accessory,chip_conveyor,,台,false,,
+SVC-INST,On-site levelling technician,現場水平調整技師服務,service,,,式,false,,
+ACC-PROBE,Renishaw RMP60 probe,Renishaw RMP60 探測系統,accessory,special,,式,false,,
+OPT-CTS-H,Coolant through spindle centre (H),主軸中心出水 H 型,accessory,coolant,,式,false,,
+OPT-AAC3,3-seat AAC assembly,三座式 AAC 組件,accessory,special,,式,false,,
+OPT-PWR,Fanuc power failure backup system,Fanuc 斷電保護系統,accessory,special,,式,false,,

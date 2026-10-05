@@ -1,0 +1,10 @@
+code,name_en,name_zh,product_line,is_active
+KMC-637AS,Plano Machining Center,龍門式加工中心機〈五軸〉,gantry,true
+KMC-218E8,High Speed Double Column Machining Center,高速門型加工中心機,5axis,true
+KMC-123EU,High-Speed 5-Axis Double Column Machining Center,高速五軸門型加工中心機,5axis,true
+KMC-GM,Gantry Mercury 5-axis,龍門式加工中心機 Mercury,gantry,true
+KMC-GN,Gantry Neptunus box-way,龍門式加工中心機 Neptunus,gantry,true
+HMA15,High Rigidity type,高剛性型加工中心機,boxway,true
+HMA11,High Rigidity type,高剛性型加工中心機,boxway,true
+HA8,Box-way custom build,箱型滑軌訂製機,boxway,true
+HAX,Box-way custom build,箱型滑軌訂製機,boxway,true

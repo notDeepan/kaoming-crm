@@ -1,0 +1,16 @@
+{
+  "KMC-637AS": {
+    "controller": {
+      "valueEn": "Fanuc 31iMB",
+      "valueZh": "Fanuc 31iMB"
+    },
+    "spindle": {
+      "valueEn": "ISO 50 / 6000 rpm (V) / 3500 rpm (H)",
+      "valueZh": "ISO 50 / 6000 / 3500 轉"
+    },
+    "tool_magazine": {
+      "valueEn": "60 tools / MAS403-BT50",
+      "valueZh": "60 把 / MAS403-BT50"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+@page { size: A4; margin: 19mm 16mm 22mm; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #1e293b; font-family: Arial, "Noto Sans TC", sans-serif; font-size: 10pt; }
+main { width: 100%; }
+.eyebrow { color: #64748b; font-size: 8pt; letter-spacing: .12em; font-weight: 700; margin-bottom: 12mm; }
+h1 { color: #142c40; font-size: 22pt; margin: 0 0 6mm; }
+h2 { color: #142c40; font-size: 12pt; margin: 12mm 0 3mm; border-bottom: 1px solid #94a3b8; padding-bottom: 2mm; }
+.intro { color: #475569; margin-bottom: 8mm; }
+table { border-collapse: collapse; width: 100%; font-size: 9pt; }
+th { text-align: left; color: #fff; background: #183d56; padding: 3mm; }
+td { padding: 3mm; border-bottom: 1px solid #cbd5e1; vertical-align: top; }
+tr { break-inside: avoid; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; margin: 8mm 0; }
+.grid div { border-bottom: 1px solid #cbd5e1; padding-bottom: 3mm; }
+.grid span { display: block; color: #64748b; font-size: 8pt; }
+.grid strong { display: block; margin-top: 1mm; }
+p { line-height: 1.5; }
