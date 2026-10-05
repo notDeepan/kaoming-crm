@@ -22,6 +22,7 @@ const sections = [
   { key: 'Commissions', href: '/commissions', available: true },
   { key: 'Leakage', href: '/leakage', available: true },
   { key: 'Reports', href: '/reports', available: true },
+  { key: 'Account security', href: '/account/security', available: true },
   { key: 'Settings', href: '/settings', available: false },
 ] as const;
 

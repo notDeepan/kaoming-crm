@@ -6,9 +6,9 @@ import { z } from 'zod';
 import { getDb } from '@/db/client';
 import { userRoles } from '@/db/enums';
 import { users } from '@/db/schema';
-import { requireRole } from '@/lib/authorization';
-import { hashPassword } from '@/lib/password';
-import type { UserActionState } from './validation';
+import { requireRole, requireUser } from '@/lib/authorization';
+import { hashPassword, verifyPassword } from '@/lib/password';
+import type { PasswordActionState, UserActionState } from './validation';
 
 const createUserInput = z.object({
   name: z.string().trim().min(1).max(200),
@@ -18,6 +18,38 @@ const createUserInput = z.object({
   department: z.string().trim().transform((value) => value || null),
   locale: z.enum(['en', 'zh-Hant']),
 });
+
+const changePasswordInput = z.object({
+  currentPassword: z.string().min(1).max(1024),
+  newPassword: z.string().min(12).max(1024),
+  confirmNewPassword: z.string().min(12).max(1024),
+});
+
+export async function changePassword(_previous: PasswordActionState, formData: FormData): Promise<PasswordActionState> {
+  const user = await requireUser();
+  const parsed = changePasswordInput.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, message: 'Check the password fields' };
+  if (parsed.data.newPassword !== parsed.data.confirmNewPassword) {
+    return { ok: false, message: 'New passwords did not match' };
+  }
+  if (parsed.data.newPassword === parsed.data.currentPassword) {
+    return { ok: false, message: 'New password must differ from current password' };
+  }
+
+  const [record] = await getDb().select({ passwordHash: users.passwordHash }).from(users)
+    .where(and(eq(users.id, user.id), eq(users.isActive, true), isNull(users.deletedAt))).limit(1);
+  if (!record?.passwordHash || !(await verifyPassword(parsed.data.currentPassword, record.passwordHash))) {
+    return { ok: false, message: 'Current password was not accepted' };
+  }
+
+  await getDb().update(users).set({
+    passwordHash: await hashPassword(parsed.data.newPassword),
+    updatedAt: new Date(),
+    updatedBy: user.id,
+  }).where(and(eq(users.id, user.id), eq(users.isActive, true), isNull(users.deletedAt)));
+  revalidatePath('/account/security');
+  return { ok: true, message: 'Password changed' };
+}
 
 export async function createUser(_previous: UserActionState, formData: FormData): Promise<UserActionState> {
   const actor = await requireRole('admin');
